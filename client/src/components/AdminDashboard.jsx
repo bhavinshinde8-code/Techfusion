@@ -6,7 +6,7 @@ import {
   CheckCircle, ExternalLink, Plus, LogOut, MapPin, 
   Shield, ArrowRight, ChevronUp, ChevronRight, Star, 
   X, Edit, Trash2, Clock, Sparkles, Globe, Eye,
-  CheckCircle2, AlertCircle, RefreshCw, Landmark, Award
+  CheckCircle2, AlertCircle, RefreshCw, Landmark, Award, Flame
 } from 'lucide-react';
 
 export default function AdminDashboard({ 
@@ -21,6 +21,7 @@ export default function AdminDashboard({
   const [activeMenu, setActiveMenu] = useState('overview');
   const [menuOpen, setMenuOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [siteFilter, setSiteFilter] = useState('all'); // 'all' | 'trending' | 'published' | 'draft'
 
   // Data from backend
   const [inquiries, setInquiries] = useState([]);
@@ -50,6 +51,8 @@ export default function AdminDashboard({
     entryFee: '',
     highlights: '',
     nearestTransit: '',
+    isTrending: false,
+    isPublished: true,
     timeline: [
       { year: '12th Century CE', title: 'Monument Foundation', description: 'Built by patron dynasty.' },
       { year: 'Modern Era', title: 'Heritage Inscription', description: 'Recognized as an iconic tourism wonder.' }
@@ -178,6 +181,8 @@ export default function AdminDashboard({
       entryFee: 'Free Entry',
       highlights: 'Historical Sanctum, Scenic Viewpoints',
       nearestTransit: 'Nashik Road Railway Station',
+      isTrending: false,
+      isPublished: true,
       timeline: [
         { year: 'Foundational Era', title: 'Historic Commission', description: 'Established by regional rulers.' },
         { year: 'Present Era', title: 'Tourism Heritage Site', description: 'Maintained for global travelers.' }
@@ -186,7 +191,7 @@ export default function AdminDashboard({
     setIsModalOpen(true);
   };
 
-  // Edit Modal Handler
+  // Edit Modal Handler (Edit Info Option)
   const openEditModal = (place) => {
     setModalMode('edit');
     setSelectedId(place._id);
@@ -203,11 +208,48 @@ export default function AdminDashboard({
       entryFee: place.keyPoints?.entryFee || '',
       highlights: place.keyPoints?.highlights?.join(', ') || '',
       nearestTransit: place.keyPoints?.nearestTransit || '',
+      isTrending: place.isTrending || false,
+      isPublished: place.isPublished !== false,
       timeline: place.timeline && place.timeline.length > 0 
         ? place.timeline 
         : [{ year: 'Historic Era', title: 'Heritage Inscription', description: 'Notable milestone.' }]
     });
     setIsModalOpen(true);
+  };
+
+  // Option 1: Set on Trending Toggle
+  const toggleTrending = async (place, e) => {
+    if (e) e.stopPropagation();
+    const newStatus = !place.isTrending;
+    try {
+      await api.updateDestination(place._id, {
+        ...place,
+        isTrending: newStatus
+      });
+      if (onDestinationsChange) {
+        onDestinationsChange(destinations.map(d => d._id === place._id ? { ...d, isTrending: newStatus } : d));
+      }
+    } catch (err) {
+      console.error('Failed to update trending status:', err);
+    }
+  };
+
+  // Option 2: Publish / Unpublish Toggle
+  const togglePublish = async (place, e) => {
+    if (e) e.stopPropagation();
+    const currentPublished = place.isPublished !== false;
+    const newStatus = !currentPublished;
+    try {
+      await api.updateDestination(place._id, {
+        ...place,
+        isPublished: newStatus
+      });
+      if (onDestinationsChange) {
+        onDestinationsChange(destinations.map(d => d._id === place._id ? { ...d, isPublished: newStatus } : d));
+      }
+    } catch (err) {
+      console.error('Failed to update publish status:', err);
+    }
   };
 
   const handleFormSubmit = async (e) => {
@@ -220,6 +262,8 @@ export default function AdminDashboard({
       image: formData.image,
       shortHistory: formData.shortHistory,
       longDescription: formData.longDescription,
+      isTrending: formData.isTrending,
+      isPublished: formData.isPublished,
       keyPoints: {
         bestTime: formData.bestTime,
         timings: formData.timings,
@@ -286,11 +330,24 @@ export default function AdminDashboard({
     }
   };
 
+  // Counts for Site Info filters
+  const trendingCount = destinations.filter(d => d.isTrending).length;
+  const publishedCount = destinations.filter(d => d.isPublished !== false).length;
+  const draftCount = destinations.filter(d => d.isPublished === false).length;
+
   // Filtered sites for Site Info tab
   const displayedSites = destinations.filter(d => {
+    if (siteFilter === 'trending' && !d.isTrending) return false;
+    if (siteFilter === 'published' && d.isPublished === false) return false;
+    if (siteFilter === 'draft' && d.isPublished !== false) return false;
+
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
-    return d.title?.toLowerCase().includes(q) || d.state?.toLowerCase().includes(q) || d.category?.toLowerCase().includes(q);
+    return (
+      d.title?.toLowerCase().includes(q) || 
+      d.state?.toLowerCase().includes(q) || 
+      d.category?.toLowerCase().includes(q)
+    );
   });
 
   const adminDisplayName = user?.name || 'swami warude';
@@ -701,10 +758,11 @@ export default function AdminDashboard({
               </div>
             )}
 
-            {/* VIEW 2: SITE INFO (Full Destinations Management) */}
+            {/* VIEW 2: SITE INFO (Full Destinations Management with Trending, Publish, Delete & Edit Info) */}
             {activeMenu === 'sites' && (
               <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4 animate-in fade-in">
                 
+                {/* Header with Title & Add Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
                   <div>
                     <h2 className="font-bold text-base text-gray-900 flex items-center gap-2">
@@ -712,7 +770,7 @@ export default function AdminDashboard({
                       Tourism Sites Directory ({destinations.length})
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Add, update, or remove destinations synced in MongoDB Atlas.
+                      Set trending status, publish/unpublish, edit info, and delete sites in real time with MongoDB Atlas.
                     </p>
                   </div>
 
@@ -726,63 +784,214 @@ export default function AdminDashboard({
                     />
                     <button
                       onClick={openAddModal}
-                      className="px-3 py-1.5 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shadow-sm cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shadow-sm cursor-pointer hover:scale-105 transition"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add Site
                     </button>
                   </div>
                 </div>
 
-                {/* Destinations List */}
-                <div className="divide-y divide-gray-100">
-                  {displayedSites.map((place) => (
-                    <div key={place._id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 rounded-xl px-2 transition">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img 
-                          src={place.image} 
-                          alt={place.title}
-                          className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" 
-                        />
-                        <div className="min-w-0">
-                          <div className="font-bold text-xs sm:text-sm text-gray-900 truncate">
-                            {place.title}
+                {/* Filter Pills (All, Trending, Published, Draft) */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSiteFilter('all')}
+                    className={`px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                      siteFilter === 'all'
+                        ? 'bg-amber-500 text-black shadow-xs'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    All Sites ({destinations.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSiteFilter('trending')}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                      siteFilter === 'trending'
+                        ? 'bg-orange-500 text-white shadow-xs'
+                        : 'bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200'
+                    }`}
+                  >
+                    <Flame className="w-3 h-3 fill-current" />
+                    <span>Trending ({trendingCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSiteFilter('published')}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                      siteFilter === 'published'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Published ({publishedCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSiteFilter('draft')}
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                      siteFilter === 'draft'
+                        ? 'bg-gray-700 text-white shadow-xs'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <span>Draft / Unpublished ({draftCount})</span>
+                  </button>
+                </div>
+
+                {/* Destinations List with Individual Options */}
+                <div className="space-y-2.5 pt-1">
+                  {displayedSites.length > 0 ? (
+                    displayedSites.map((place) => (
+                      <div 
+                        key={place._id} 
+                        className="p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 hover:border-amber-300 hover:bg-slate-50/50 transition-all shadow-sm space-y-3"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                          
+                          {/* Left: Thumbnail & Details */}
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <div className="relative shrink-0">
+                              <img 
+                                src={place.image} 
+                                alt={place.title}
+                                className="w-14 h-14 rounded-2xl object-cover border border-gray-200 shadow-sm" 
+                              />
+                              {place.isTrending && (
+                                <span 
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 text-white flex items-center justify-center text-[10px] shadow-md ring-2 ring-white"
+                                  title="Trending Site"
+                                >
+                                  🔥
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-extrabold text-sm sm:text-base text-gray-900 truncate">
+                                  {place.title}
+                                </span>
+
+                                {/* Status Badges */}
+                                {place.isTrending && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-50 text-orange-600 border border-orange-200 shadow-xs">
+                                    <Flame className="w-3 h-3 fill-orange-500 text-orange-500" />
+                                    <span>Trending</span>
+                                  </span>
+                                )}
+
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  place.isPublished !== false 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : 'bg-gray-100 text-gray-500 border-gray-300'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${place.isPublished !== false ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                  <span>{place.isPublished !== false ? 'Published' : 'Draft'}</span>
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-gray-500 flex flex-wrap items-center gap-2 mt-1">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold text-[10px] border border-amber-200">
+                                  {place.category}
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-amber-500" />
+                                  {place.state}
+                                </span>
+                                {place.era && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="text-gray-400">{place.era}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
-                            <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium text-[10px] border border-amber-200">
-                              {place.category}
-                            </span>
-                            <span>• {place.state}</span>
+
+                          {/* Right: Individual Action Controls (Trending, Publish, Edit Info, Delete, Preview) */}
+                          <div className="flex flex-wrap items-center gap-2 shrink-0 self-start lg:self-center pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100">
+                            
+                            {/* OPTION 1: SET ON TRENDING */}
+                            <button
+                              type="button"
+                              onClick={(e) => toggleTrending(place, e)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-xs ${
+                                place.isTrending
+                                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-transparent hover:from-orange-600 hover:to-amber-600 shadow-orange-500/20 shadow-md'
+                                  : 'bg-white hover:bg-orange-50 text-gray-700 hover:text-orange-600 border-gray-200 hover:border-orange-300'
+                              }`}
+                              title={place.isTrending ? "Click to remove from trending" : "Click to set this site on Trending"}
+                            >
+                              <Flame className={`w-3.5 h-3.5 ${place.isTrending ? 'fill-current text-white' : 'text-orange-500'}`} />
+                              <span>{place.isTrending ? 'Trending Active' : 'Set Trending'}</span>
+                            </button>
+
+                            {/* OPTION 2: PUBLISH / UNPUBLISH */}
+                            <button
+                              type="button"
+                              onClick={(e) => togglePublish(place, e)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-xs ${
+                                place.isPublished !== false
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : 'bg-gray-100 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 border-gray-300'
+                              }`}
+                              title={place.isPublished !== false ? "Click to unpublish site" : "Click to publish site live"}
+                            >
+                              <CheckCircle2 className={`w-3.5 h-3.5 ${place.isPublished !== false ? 'text-emerald-600' : 'text-gray-400'}`} />
+                              <span>{place.isPublished !== false ? 'Published' : 'Unpublish'}</span>
+                            </button>
+
+                            {/* OPTION 3: EDIT INFO */}
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(place)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                              title="Edit destination information"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Edit Info</span>
+                            </button>
+
+                            {/* OPTION 4: DELETE */}
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(place._id, place.title)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                              title="Delete site from MongoDB Atlas"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+
+                            {/* OPTION 5: PREVIEW */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onSelectPlace) onSelectPlace(place);
+                              }}
+                              className="p-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition cursor-pointer"
+                              title="Preview Full Webpage Card"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+
                           </div>
+
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        <button
-                          onClick={() => {
-                            if (onSelectPlace) onSelectPlace(place);
-                          }}
-                          className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition cursor-pointer"
-                          title="Preview Destination"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => openEditModal(place)}
-                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
-                          title="Edit Destination"
-                        >
-                          <Edit className="w-3 h-3" /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(place._id, place.title)}
-                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs transition cursor-pointer"
-                          title="Delete Destination"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100 text-gray-500 text-xs">
+                      No sites match your active filter. Click "All Sites" or clear search.
                     </div>
-                  ))}
+                  )}
                 </div>
 
               </div>
@@ -1089,6 +1298,40 @@ export default function AdminDashboard({
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                     placeholder="e.g. Free Entry"
                   />
+                </div>
+              </div>
+
+              {/* Site Visibility & Trending Controls */}
+              <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-2">
+                <div className="font-extrabold text-[11px] text-amber-900 uppercase tracking-wider">
+                  Site Visibility & Marketing Flags
+                </div>
+                <div className="flex flex-wrap items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input 
+                      type="checkbox"
+                      checked={formData.isTrending}
+                      onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
+                      className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
+                      <span>Set on Trending</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input 
+                      type="checkbox"
+                      checked={formData.isPublished}
+                      onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Published on Web</span>
+                    </span>
+                  </label>
                 </div>
               </div>
 

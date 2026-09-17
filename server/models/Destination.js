@@ -48,6 +48,14 @@ const DestinationSchema = new mongoose.Schema({
     architecturalStyle: { type: String, default: 'Indian Classical / Regional' }
   },
   timeline: [TimelineItemSchema],
+  isTrending: {
+    type: Boolean,
+    default: false
+  },
+  isPublished: {
+    type: Boolean,
+    default: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

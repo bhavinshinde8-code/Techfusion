@@ -1,9 +1,14 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, ArrowRight, Heart, Clock } from 'lucide-react';
+import { MapPin, ArrowRight, Heart, Clock, Flame } from 'lucide-react';
 
 export default function TopDestinations({ destinations, onSelectPlace }) {
   const { favorites, toggleFavorite } = useAuth();
+
+  // Filter only published destinations and sort trending ones first
+  const activeDestinations = destinations
+    .filter(d => d.isPublished !== false)
+    .sort((a, b) => (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0));
 
   return (
     <section id="destinations" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
@@ -22,7 +27,7 @@ export default function TopDestinations({ destinations, onSelectPlace }) {
 
       {/* 3-Card Responsive Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {destinations.slice(0, 3).map((place) => {
+        {activeDestinations.slice(0, 3).map((place) => {
           const isFav = favorites.includes(place._id);
           return (
             <div 
@@ -39,9 +44,17 @@ export default function TopDestinations({ destinations, onSelectPlace }) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
                 
-                <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-amber-700 border border-amber-300 shadow-sm uppercase tracking-wider">
-                  {place.category}
-                </span>
+                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-amber-700 border border-amber-300 shadow-sm uppercase tracking-wider">
+                    {place.category}
+                  </span>
+                  {place.isTrending && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm flex items-center gap-0.5 uppercase tracking-wider">
+                      <Flame className="w-2.5 h-2.5 fill-current" />
+                      <span>Trending</span>
+                    </span>
+                  )}
+                </div>
 
                 <button 
                   onClick={(e) => {
