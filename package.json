@@ -1,0 +1,24 @@
+{
+  "name": "phoenix-tourism-mern",
+  "version": "1.0.0",
+  "description": "Phoenix - Let's Know Our India Tourism Platform (MERN Stack Architecture)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "mern",
+    "tourism",
+    "india",
+    "phoenix",
+    "heritage",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

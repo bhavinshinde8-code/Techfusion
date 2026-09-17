@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phoenix - Let's Know Our India | Heritage & Tourism Explorer</title>
+  <meta name="description" content="Explore India's breathtaking heritage, historical timelines, key tourist attractions, and cultural marvels with Phoenix Tourism." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="dark-theme">
+
+  <!-- TOP ANNOUNCEMENT BANNER -->
+  <div class="top-announcement">
+    <span>✨ Incredible India: Discover 5,000+ years of vibrant living history & monuments</span>
+    <button class="quick-demo-pill" onclick="quickDemoLogin('user')">⚡ Instant Demo User</button>
+    <button class="quick-demo-pill admin" onclick="quickDemoLogin('admin')">👑 Instant Demo Admin</button>
+  </div>
+
+  <!-- NAVIGATION BAR (As sketched: Logo "Phoenix" on left, Sign Up & Login on right) -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#" class="brand-logo" onclick="switchView('landing')">
+        <div class="logo-icon-wrapper">
+          <i class="fa-solid fa-feather-pointed"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Phoenix</span>
+          <span class="brand-sub">Tourism & Heritage</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="nav-links">
+        <a href="#hero" class="nav-item active" onclick="switchView('landing'); smoothScroll('hero');">Home</a>
+        <a href="#destinations" class="nav-item" onclick="switchView('landing'); smoothScroll('destinations');">Top Destinations</a>
+        <a href="#discoveries" class="nav-item" onclick="switchView('landing'); smoothScroll('discoveries');">Discover India</a>
+        <a href="#contact" class="nav-item" onclick="switchView('landing'); smoothScroll('contact');">Contact Us</a>
+        <a href="javascript:void(0)" class="nav-item highlight" onclick="requireAuth('user')">
+          <i class="fa-solid fa-compass"></i> Explore Dashboard
+        </a>
+      </nav>
+
+      <!-- Auth Action Buttons (Right side as sketched) -->
+      <div class="nav-actions" id="authActions">
+        <button class="btn btn-outline" id="btnSignUp" onclick="openAuthModal('signup')">
+          <i class="fa-solid fa-user-plus"></i> Sign Up
+        </button>
+        <button class="btn btn-primary" id="btnLogin" onclick="openAuthModal('login')">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+        </button>
+      </div>
+
+      <!-- User Logged-in Profile Dropdown (Hidden initially) -->
+      <div class="user-menu hidden" id="userMenu">
+        <div class="user-badge" onclick="toggleDropdown()">
+          <div class="user-avatar" id="navAvatar">U</div>
+          <div class="user-details-mini">
+            <span class="user-name" id="navUserName">Traveler</span>
+            <span class="user-role-tag" id="navUserRole">User</span>
+          </div>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <div class="dropdown-header">
+            <p class="dropdown-welcome">Signed in as</p>
+            <p class="dropdown-email" id="dropdownEmail">user@phoenix.in</p>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a href="javascript:void(0)" onclick="switchView('user-dashboard')">
+            <i class="fa-solid fa-compass"></i> User Dashboard
+          </a>
+          <a href="javascript:void(0)" id="adminLink" class="hidden" onclick="switchView('admin-dashboard')">
+            <i class="fa-solid fa-shield-halved"></i> Admin Dashboard
+          </a>
+          <a href="javascript:void(0)" onclick="openFavoritesModal()">
+            <i class="fa-solid fa-heart"></i> Saved Places (<span id="favCount">0</span>)
+          </a>
+          <div class="dropdown-divider"></div>
+          <a href="javascript:void(0)" class="logout-link" onclick="logout()">
+            <i class="fa-solid fa-power-off"></i> Logout
+          </a>
+        </div>
+      </div>
+
+      <!-- Mobile Menu Toggle -->
+      <button class="mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- MAIN LANDING VIEW (Matches user sketch) -->
+  <!-- ============================================================== -->
+  <main id="landingView" class="view-section active">
+
+    <!-- HERO SECTION (Sketch: "Let know Our India") -->
+    <section class="hero-section" id="hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i class="fa-solid fa-sun"></i> Explore the Golden Bird of the East
+        </div>
+        <h1 class="hero-title">
+          Let’s Know <span class="gradient-text">Our India.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Unveil majestic palaces, timeless sacred temples, ancient civilizations, and awe-inspiring heritage across 28 states and 8 union territories.
+        </p>
+
+        <!-- Quick Hero Search Input -->
+        <div class="hero-search-box">
+          <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="heroSearchInput" placeholder="Search any place (e.g. Taj Mahal, Varanasi, Jaipur, Hampi...)" onkeyup="handleHeroSearchKey(event)">
+          </div>
+          <button class="btn btn-gold btn-hero" onclick="triggerHeroSearch()">
+            <i class="fa-solid fa-earth-asia"></i> Explore Now
+          </button>
+        </div>
+
+        <!-- Quick Heritage Stats -->
+        <div class="hero-stats">
+          <div class="stat-card">
+            <span class="stat-number">42+</span>
+            <span class="stat-label">UNESCO World Heritage Sites</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">5,000+</span>
+            <span class="stat-label">Years of Recorded History</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">1,000+</span>
+            <span class="stat-label">Ancient Forts & Monuments</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">28</span>
+            <span class="stat-label">Diverse Cultural States</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: TOP DESTINATIONS (Sketch: "Top Destination" with 3 boxes) -->
+    <section class="destinations-section" id="destinations">
+      <div class="section-container">
+        <div class="section-header">
+          <div class="section-tag">Iconic Landmarks</div>
+          <h2 class="section-title">Top Destinations</h2>
+          <p class="section-desc">The most revered monuments, architectural wonders, and cultural capitals of India.</p>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="category-pills">
+          <button class="pill active" onclick="filterLandingPlaces('all', this)">All Highlights</button>
+          <button class="pill" onclick="filterLandingPlaces('UNESCO Heritage', this)">UNESCO Heritage</button>
+          <button class="pill" onclick="filterLandingPlaces('Forts & Palaces', this)">Forts & Palaces</button>
+          <button class="pill" onclick="filterLandingPlaces('Spiritual & Temples', this)">Spiritual & Sacred</button>
+          <button class="pill" onclick="filterLandingPlaces('Ancient Caves', this)">Ancient Caves</button>
+        </div>
+
+        <!-- Top Destination Cards Grid (matches 3 boxes in sketch) -->
+        <div class="destination-grid" id="topDestinationsGrid">
+          <!-- Populated dynamically by app.js -->
+        </div>
+
+        <div class="view-more-container">
+          <button class="btn btn-outline-gold" onclick="requireAuth('user')">
+            <i class="fa-solid fa-compass"></i> Open User Dashboard for Full Search & Timeline
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: FEATURE / DISCOVERIES (Sketch: "Feature / Disclaimers / Discoveries" with 3 boxes) -->
+    <section class="discoveries-section" id="discoveries">
+      <div class="section-container">
+        <div class="section-header">
+          <div class="section-tag">Curated Cultural Journeys</div>
+          <h2 class="section-title">Discover India’s Essence</h2>
+          <p class="section-desc">Immerse yourself into distinct historical eras that shaped the subcontinent.</p>
+        </div>
+
+        <div class="discoveries-grid">
+          <!-- Discovery Card 1 -->
+          <div class="discovery-card" onclick="filterByCircuit('Forts & Palaces')">
+            <div class="discovery-image-wrap">
+              <img src="https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=800&q=80" alt="Royal Rajasthan" loading="lazy">
+              <div class="discovery-badge">Medieval Era</div>
+            </div>
+            <div class="discovery-body">
+              <div class="discovery-icon"><i class="fa-solid fa-chess-rook"></i></div>
+              <h3>Royal Forts & Palaces</h3>
+              <p>Explore impregnable desert citadels, Rajput valor, and opulent Mughal court architectures across Amber, Mehrangarh, and Agra.</p>
+              <span class="discovery-cta">Explore Heritage Circuit <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
+          </div>
+
+          <!-- Discovery Card 2 -->
+          <div class="discovery-card" onclick="filterByCircuit('Spiritual & Temples')">
+            <div class="discovery-image-wrap">
+              <img src="https://images.unsplash.com/photo-1561361513-2d000a50f0dc?auto=format&fit=crop&w=800&q=80" alt="Sacred Ghats" loading="lazy">
+              <div class="discovery-badge">Living Antiquity</div>
+            </div>
+            <div class="discovery-body">
+              <div class="discovery-icon"><i class="fa-solid fa-om"></i></div>
+              <h3>Sacred Temples & Ghats</h3>
+              <p>Witness thousands of years of uninterrupted devotion along the Holy Ganges in Varanasi, Kanchipuram, and the grand Dravidian temples of Tamil Nadu.</p>
+              <span class="discovery-cta">Explore Spiritual Circuit <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
+          </div>
+
+          <!-- Discovery Card 3 -->
+          <div class="discovery-card" onclick="filterByCircuit('UNESCO Heritage')">
+            <div class="discovery-image-wrap">
+              <img src="https://images.unsplash.com/photo-1600100397608-f010f444f479?auto=format&fit=crop&w=800&q=80" alt="Ancient Ruins" loading="lazy">
+              <div class="discovery-badge">Ancient Empires</div>
+            </div>
+            <div class="discovery-body">
+              <div class="discovery-icon"><i class="fa-solid fa-landmark-dome"></i></div>
+              <h3>Lost Empires & Boulder Ruins</h3>
+              <p>Walk among the colossal monolithic chariot shrines of Hampi (Vijayanagara) and the carved rock sanctuaries of Ajanta and Ellora.</p>
+              <span class="discovery-cta">Explore Archaeology Circuit <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: CONTACT US (Sketch: "Contact Us" section) -->
+    <section class="contact-section" id="contact">
+      <div class="section-container">
+        <div class="contact-wrapper">
+          <div class="contact-info">
+            <div class="section-tag">Get in Touch</div>
+            <h2 class="section-title">Contact Phoenix Tourism</h2>
+            <p class="section-desc">Have questions about historic circuits, local guides, itinerary planning, or listing new monuments? Our heritage team is here to assist you.</p>
+
+            <div class="contact-info-cards">
+              <div class="info-card">
+                <i class="fa-solid fa-location-dot info-icon"></i>
+                <div>
+                  <h4>Headquarters</h4>
+                  <p>Phoenix Heritage Plaza, Janpath Road, New Delhi, India</p>
+                </div>
+              </div>
+              <div class="info-card">
+                <i class="fa-solid fa-envelope info-icon"></i>
+                <div>
+                  <h4>Email Support</h4>
+                  <p>explore@phoenix-tourism.in</p>
+                </div>
+              </div>
+              <div class="info-card">
+                <i class="fa-solid fa-phone-volume info-icon"></i>
+                <div>
+                  <h4>Tourist Helpline</h4>
+                  <p>+91 (11) 2336-1234 / Toll Free 1800-11-1363</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="contact-form-container">
+            <form id="contactForm" class="contact-form" onsubmit="handleContactSubmit(event)">
+              <h3>Send an Inquiry</h3>
+              <div class="form-group">
+                <label for="contactName">Your Full Name</label>
+                <input type="text" id="contactName" placeholder="e.g. Aarav Sharma" required />
+              </div>
+              <div class="form-group">
+                <label for="contactEmail">Email Address</label>
+                <input type="email" id="contactEmail" placeholder="e.g. aarav@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="contactInterest">Area of Interest</label>
+                <select id="contactInterest" required>
+                  <option value="General Tourism Inquiry">General Tourism Inquiry</option>
+                  <option value="Historical Timeline Research">Historical Timeline Research</option>
+                  <option value="Heritage Walk Itinerary">Heritage Walk Itinerary</option>
+                  <option value="Suggesting a New Destination">Suggesting a New Monument</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="contactMessage">Your Message / Query</label>
+                <textarea id="contactMessage" rows="4" placeholder="Tell us what destination or heritage site you would like to know more about..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-gold btn-full">
+                <i class="fa-solid fa-paper-plane"></i> Send Message
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- USER DASHBOARD VIEW (Full Search & Timeline Exploration) -->
+  <!-- ============================================================== -->
+  <section id="userDashboardView" class="view-section">
+    <div class="dashboard-header-banner">
+      <div class="section-container dashboard-head-inner">
+        <div>
+          <button class="back-to-home-btn" onclick="switchView('landing')">
+            <i class="fa-solid fa-arrow-left"></i> Back to Home
+          </button>
+          <h1 class="dash-title">Traveler Discovery Dashboard</h1>
+          <p class="dash-sub">Search any place across India to uncover high-res photos, short history, key highlights, historical timelines, and deep descriptions.</p>
+        </div>
+        <div class="dash-actions-right">
+          <button class="btn btn-outline" onclick="openFavoritesModal()">
+            <i class="fa-solid fa-heart"></i> My Wishlist (<span id="userDashFavCount">0</span>)
+          </button>
+          <button class="btn btn-outline" id="switchToAdminBtn" onclick="switchView('admin-dashboard')" style="display:none;">
+            <i class="fa-solid fa-gear"></i> Admin Suite
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-container dashboard-body">
+      <!-- Search & Filters Toolbar -->
+      <div class="search-toolbar">
+        <div class="dashboard-search-input">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="dashSearchInput" placeholder="Search by destination name, state (e.g., Uttar Pradesh, Karnataka, Rajasthan), or era..." oninput="handleDashSearch(this.value)">
+          <button class="clear-search-btn" id="clearSearchBtn" onclick="clearSearch()" style="display:none;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="category-filters-scroll">
+          <button class="filter-chip active" onclick="setDashboardFilter('All', this)">All Places</button>
+          <button class="filter-chip" onclick="setDashboardFilter('UNESCO Heritage', this)">UNESCO Heritage</button>
+          <button class="filter-chip" onclick="setDashboardFilter('Forts & Palaces', this)">Forts & Palaces</button>
+          <button class="filter-chip" onclick="setDashboardFilter('Spiritual & Temples', this)">Spiritual & Temples</button>
+          <button class="filter-chip" onclick="setDashboardFilter('Ancient Caves', this)">Ancient Caves</button>
+          <button class="filter-chip" onclick="setDashboardFilter('Natural & Scenic', this)">Natural & Scenic</button>
+        </div>
+      </div>
+
+      <!-- Results Count & Status -->
+      <div class="search-status-bar">
+        <span id="resultsCountText">Showing all destinations</span>
+      </div>
+
+      <!-- Destination Grid inside User Dashboard -->
+      <div class="dashboard-destinations-grid" id="userDestinationsGrid">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- ADMIN DASHBOARD VIEW (Place Management & CRUD) -->
+  <!-- ============================================================== -->
+  <section id="adminDashboardView" class="view-section">
+    <div class="dashboard-header-banner admin-theme">
+      <div class="section-container dashboard-head-inner">
+        <div>
+          <button class="back-to-home-btn" onclick="switchView('landing')">
+            <i class="fa-solid fa-arrow-left"></i> Back to Home
+          </button>
+          <h1 class="dash-title"><i class="fa-solid fa-shield-halved"></i> Admin Management Suite</h1>
+          <p class="dash-sub">Add, modify, and manage destinations, interactive historical timelines, photo galleries, and traveler inquiries.</p>
+        </div>
+        <div class="dash-actions-right">
+          <button class="btn btn-gold" onclick="openPlaceModal('add')">
+            <i class="fa-solid fa-plus"></i> Add New Destination
+          </button>
+          <button class="btn btn-outline" onclick="switchView('user-dashboard')">
+            <i class="fa-solid fa-eye"></i> View as Traveler
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-container dashboard-body">
+      <!-- Admin Metric Cards -->
+      <div class="admin-metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon gold"><i class="fa-solid fa-landmark"></i></div>
+          <div>
+            <div class="metric-number" id="metricTotalPlaces">0</div>
+            <div class="metric-label">Total Destinations</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon blue"><i class="fa-solid fa-award"></i></div>
+          <div>
+            <div class="metric-number" id="metricUnescoPlaces">0</div>
+            <div class="metric-label">UNESCO World Heritage Sites</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon green"><i class="fa-solid fa-timeline"></i></div>
+          <div>
+            <div class="metric-number" id="metricTotalTimelines">0</div>
+            <div class="metric-label">Historical Milestones Logged</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon purple"><i class="fa-solid fa-envelope-open-text"></i></div>
+          <div>
+            <div class="metric-number" id="metricTotalInquiries">0</div>
+            <div class="metric-label">Traveler Inquiries</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Tabs: Destinations List vs Inquiries -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('places', this)">
+          <i class="fa-solid fa-map-location-dot"></i> Manage Places (<span id="adminPlaceCount">0</span>)
+        </button>
+        <button class="admin-tab" onclick="switchAdminTab('inquiries', this)">
+          <i class="fa-solid fa-inbox"></i> Traveler Inquiries (<span id="adminInquiryCount">0</span>)
+        </button>
+      </div>
+
+      <!-- Places Table Tab -->
+      <div id="adminPlacesTab" class="admin-tab-content active">
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Destination</th>
+                <th>State & Region</th>
+                <th>Category</th>
+                <th>Timeline Milestones</th>
+                <th>Best Time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminPlacesTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Inquiries Tab -->
+      <div id="adminInquiriesTab" class="admin-tab-content">
+        <div class="inquiries-list" id="adminInquiriesList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- MODAL 1: AUTHENTICATION (Login / Sign Up + Role Switcher) -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-dialog auth-dialog">
+      <button class="modal-close" onclick="closeModal('authModal')">&times;</button>
+      
+      <div class="auth-header">
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" id="tabLogin" onclick="setAuthMode('login')">Log In</button>
+          <button class="auth-tab-btn" id="tabSignup" onclick="setAuthMode('signup')">Sign Up</button>
+        </div>
+      </div>
+
+      <div class="auth-body">
+        <!-- Quick Demo Fast Login Pills -->
+        <div class="demo-login-box">
+          <p class="demo-box-label">⚡ 1-Click Instant Preview Access:</p>
+          <div class="demo-btn-group">
+            <button type="button" class="btn-demo-pill" onclick="quickDemoLogin('user')">
+              <i class="fa-solid fa-user"></i> Login as User
+            </button>
+            <button type="button" class="btn-demo-pill admin" onclick="quickDemoLogin('admin')">
+              <i class="fa-solid fa-shield-halved"></i> Login as Admin
+            </button>
+          </div>
+        </div>
+
+        <form id="authForm" onsubmit="handleAuthSubmit(event)">
+          <div class="form-group" id="nameGroup" style="display:none;">
+            <label for="authName">Full Name</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="authName" placeholder="Enter your full name" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="authEmail">Email Address</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-envelope"></i>
+              <input type="email" id="authEmail" placeholder="name@example.com" required value="traveler@phoenix.in" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="authPassword">Password</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="authPassword" placeholder="••••••••" required value="password123" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="authRole">Login Role</label>
+            <select id="authRole" class="auth-role-select">
+              <option value="user">Traveler / Standard User</option>
+              <option value="admin">Platform Admin (Management Suite)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-gold btn-full auth-submit-btn" id="authSubmitBtn">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Continue to Phoenix
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL 2: PLACE DETAILS MODAL (Photo, Short History, Key Points, -->
+  <!-- Interactive Historical Timeline, Long Description)             -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="placeDetailsModal">
+    <div class="modal-dialog place-details-dialog">
+      <button class="modal-close" onclick="closeModal('placeDetailsModal')">&times;</button>
+      
+      <div id="placeDetailsContent">
+        <!-- Dynamically injected in app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL 3: ADMIN ADD / EDIT PLACE MODAL (With Timeline Builder)  -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="placeFormModal">
+    <div class="modal-dialog admin-form-dialog">
+      <button class="modal-close" onclick="closeModal('placeFormModal')">&times;</button>
+      
+      <div class="modal-header">
+        <h2 id="placeFormTitle"><i class="fa-solid fa-landmark"></i> Add New Destination</h2>
+        <p class="modal-subtitle">Enter details, key tourist points, and historical timeline events.</p>
+      </div>
+
+      <form id="placeForm" onsubmit="handlePlaceFormSubmit(event)">
+        <input type="hidden" id="formPlaceId" />
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="formTitle">Destination Name *</label>
+            <input type="text" id="formTitle" placeholder="e.g. Konark Sun Temple" required />
+          </div>
+          <div class="form-group col-6">
+            <label for="formState">State / Location *</label>
+            <input type="text" id="formState" placeholder="e.g. Odisha, India" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="formCategory">Category *</label>
+            <select id="formCategory" required>
+              <option value="UNESCO Heritage">UNESCO Heritage</option>
+              <option value="Forts & Palaces">Forts & Palaces</option>
+              <option value="Spiritual & Temples">Spiritual & Temples</option>
+              <option value="Ancient Caves">Ancient Caves</option>
+              <option value="Natural & Scenic">Natural & Scenic</option>
+            </select>
+          </div>
+          <div class="form-group col-6">
+            <label for="formEra">Historical Era</label>
+            <input type="text" id="formEra" placeholder="e.g. 13th Century CE (Eastern Ganga Dynasty)" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="formImageUrl">Main Photo URL *</label>
+          <input type="url" id="formImageUrl" placeholder="https://images.unsplash.com/..." required />
+        </div>
+
+        <div class="form-group">
+          <label for="formShortHistory">Short History (Summary) *</label>
+          <textarea id="formShortHistory" rows="3" placeholder="A concise 2-3 sentence historical summary..." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="formLongDescription">Full Detailed Description *</label>
+          <textarea id="formLongDescription" rows="5" placeholder="Deep cultural, architectural, and historical details..." required></textarea>
+        </div>
+
+        <!-- Key Points Section -->
+        <div class="form-section-title">
+          <i class="fa-solid fa-list-check"></i> Key Visitor Information
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-4">
+            <label for="formBestTime">Best Time to Visit</label>
+            <input type="text" id="formBestTime" placeholder="e.g. October to March" required />
+          </div>
+          <div class="form-group col-4">
+            <label for="formTimings">Visiting Timings</label>
+            <input type="text" id="formTimings" placeholder="e.g. Sunrise to Sunset" required />
+          </div>
+          <div class="form-group col-4">
+            <label for="formEntryFee">Entry Fee</label>
+            <input type="text" id="formEntryFee" placeholder="e.g. ₹50 (Indians), ₹600 (Foreigners)" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-6">
+            <label for="formHighlights">Key Highlights (Comma-separated)</label>
+            <input type="text" id="formHighlights" placeholder="e.g. Stone chariot wheels, Sun dial carvings, Natya Mandir" required />
+          </div>
+          <div class="form-group col-6">
+            <label for="formNearestTransit">Nearest Airport / Train</label>
+            <input type="text" id="formNearestTransit" placeholder="e.g. Biju Patnaik Airport, Bhubaneswar" required />
+          </div>
+        </div>
+
+        <!-- Interactive Historical Timeline Builder -->
+        <div class="form-section-title between">
+          <span><i class="fa-solid fa-timeline"></i> Historical Timeline Milestones</span>
+          <button type="button" class="btn btn-sm btn-outline-gold" onclick="addTimelineRow()">
+            <i class="fa-solid fa-plus"></i> Add Milestone
+          </button>
+        </div>
+        <div id="timelineRowsContainer" class="timeline-rows-builder">
+          <!-- Dynamically populated with milestone rows -->
+        </div>
+
+        <div class="modal-form-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('placeFormModal')">Cancel</button>
+          <button type="submit" class="btn btn-gold">
+            <i class="fa-solid fa-floppy-disk"></i> Save Destination
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL 4: USER FAVORITES / WISHLIST MODAL                       -->
+  <!-- ============================================================== -->
+  <div class="modal-backdrop" id="favoritesModal">
+    <div class="modal-dialog favorites-dialog">
+      <button class="modal-close" onclick="closeModal('favoritesModal')">&times;</button>
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-heart" style="color: #ef4444;"></i> Saved Heritage Places</h2>
+        <p class="modal-subtitle">Your bookmarked places to explore on your upcoming travels.</p>
+      </div>
+      <div id="favoritesListContainer" class="favorites-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="section-container">
+      <div class="footer-grid">
+        <div class="footer-col brand-col">
+          <div class="brand-logo footer-logo">
+            <div class="logo-icon-wrapper"><i class="fa-solid fa-feather-pointed"></i></div>
+            <span class="brand-name">Phoenix</span>
+          </div>
+          <p class="footer-tagline">
+            Let's Know Our India. An interactive full-stack tourism archive celebrating the architectural, spiritual, and historical heritage of the Indian subcontinent.
+          </p>
+          <div class="social-links">
+            <a href="#" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+            <a href="#" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Popular Circuits</h4>
+          <ul class="footer-links">
+            <li><a href="javascript:void(0)" onclick="filterLandingPlaces('UNESCO Heritage')">UNESCO World Heritage</a></li>
+            <li><a href="javascript:void(0)" onclick="filterLandingPlaces('Forts & Palaces')">Rajputana & Mughal Forts</a></li>
+            <li><a href="javascript:void(0)" onclick="filterLandingPlaces('Spiritual & Temples')">Spiritual & Sacred Ghats</a></li>
+            <li><a href="javascript:void(0)" onclick="filterLandingPlaces('Ancient Caves')">Rock-Cut Caves & Monoliths</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Platform Portals</h4>
+          <ul class="footer-links">
+            <li><a href="javascript:void(0)" onclick="requireAuth('user')">User Travel Dashboard</a></li>
+            <li><a href="javascript:void(0)" onclick="quickDemoLogin('admin')">Admin Management Portal</a></li>
+            <li><a href="javascript:void(0)" onclick="openFavoritesModal()">My Bookmarked Wishlist</a></li>
+            <li><a href="#contact" onclick="smoothScroll('contact')">Heritage Inquiries</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Travel Disclaimer</h4>
+          <p class="disclaimer-text">
+            <strong>Disclaimer:</strong> Information presented here including visiting hours, entry tariffs, and seasonal recommendations are compiled for informational and educational purposes. Always verify with official Archaeological Survey of India (ASI) or State Tourism Boards before travel.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2026 Phoenix Tourism Platform. Dedicated to celebrating the timeless wonders of India.</p>
+        <div class="footer-legal">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Discovery</a>
+          <a href="#">ASI Guidelines</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
