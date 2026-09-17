@@ -43,15 +43,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('phoenix_jwt');
   };
 
-  const quickDemoLogin = (role = 'user') => {
-    const demoUser = role === 'admin' 
-      ? { id: 'admin-demo', name: 'Aditya Rajput (Admin)', email: 'admin@phoenix-tourism.in', role: 'admin' }
-      : { id: 'user-demo', name: 'Pooja Sharma', email: 'pooja@traveler.in', role: 'user' };
-
-    setUser(demoUser);
-    localStorage.setItem('phoenix_user', JSON.stringify(demoUser));
-    localStorage.setItem('phoenix_jwt', 'demo-token-' + role);
-    return demoUser;
+  const quickDemoLogin = async (role = 'user') => {
+    const email = role === 'admin' ? 'admin@phoenix-tourism.in' : 'traveler@example.com';
+    const pass = 'password123';
+    return await login(email, pass, role);
   };
 
   const toggleFavorite = (placeId) => {

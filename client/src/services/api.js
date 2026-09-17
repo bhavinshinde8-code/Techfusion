@@ -283,51 +283,31 @@ export const api = {
     }
   },
 
-  // Auth
+  // Auth (Strict Database Authentication)
   async login(email, password, role) {
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Login failed');
-      return data;
-    } catch (err) {
-      return {
-        token: 'local-jwt-' + Date.now(),
-        user: {
-          id: 'u-' + Date.now(),
-          name: email.split('@')[0],
-          email,
-          role: role || 'user'
-        }
-      };
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Login failed. Account not found in database.');
     }
+    return data;
   },
 
   async register(name, email, password, role) {
-    try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Registration failed');
-      return data;
-    } catch (err) {
-      return {
-        token: 'local-jwt-' + Date.now(),
-        user: {
-          id: 'u-' + Date.now(),
-          name,
-          email,
-          role: role || 'user'
-        }
-      };
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Registration failed.');
     }
+    return data;
   },
 
   // Inquiries

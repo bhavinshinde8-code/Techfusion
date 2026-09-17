@@ -7,8 +7,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
   const [portal, setPortal] = useState('user'); // 'user' or 'admin'
   const [tab, setTab] = useState(initialMode); // 'login' or 'signup'
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'otp'
-  const [identifier, setIdentifier] = useState('traveler@example.com');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
@@ -38,10 +38,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
     }
   };
 
-  const handleDemo = (demoRole) => {
-    const u = quickDemoLogin(demoRole);
-    onClose();
-    if (onSuccessView) onSuccessView(u.role === 'admin' ? 'admin-dashboard' : 'user-dashboard');
+  const handleDemo = async (demoRole) => {
+    setError('');
+    setLoading(true);
+    try {
+      const u = await quickDemoLogin(demoRole);
+      onClose();
+      if (onSuccessView) onSuccessView(u.role === 'admin' ? 'admin-dashboard' : 'user-dashboard');
+    } catch (err) {
+      setError(err.message || 'Demo login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -183,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
               <input
                 type="text"
                 required
-                placeholder="traveler@example.com or 9876543210"
+                placeholder={portal === 'admin' ? "admin@phoenix-tourism.in or admin email" : "traveler@example.com or phone"}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-xs placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:bg-white transition"

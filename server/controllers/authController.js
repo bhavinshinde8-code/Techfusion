@@ -161,7 +161,7 @@ exports.login = async (req, res) => {
       let isAdminAccount = false;
 
       if (role === 'admin') {
-        // Look up in dedicated Admin collection first
+        // Look up in dedicated Admin collection
         account = await Admin.findOne({ email: cleanEmail }).select('+password');
         if (account) {
           isAdminAccount = true;
@@ -170,28 +170,45 @@ exports.login = async (req, res) => {
           account = await User.findOne({ email: cleanEmail, role: 'admin' }).select('+password');
           if (account) isAdminAccount = true;
         }
+
+        if (!account) {
+          return res.status(401).json({ 
+            success: false, 
+            message: `Access Denied: No Admin account found for "${cleanEmail}" in the database. Only registered administrators can log in to the Admin Portal.` 
+          });
+        }
       } else {
         // Look up in User collection
         account = await User.findOne({ email: cleanEmail }).select('+password');
         if (!account) {
-          // Check Admin collection in case admin logs in via user tab
+          // Check Admin collection in case an admin logs in via traveler portal
           account = await Admin.findOne({ email: cleanEmail }).select('+password');
           if (account) isAdminAccount = true;
         }
+
+        if (!account) {
+          return res.status(401).json({ 
+            success: false, 
+            message: `Access Denied: No registered account found for "${cleanEmail}" in the database. Please Sign Up first to create your account.` 
+          });
+        }
       }
 
-      if (!account) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials. Account not found.' });
-      }
-
+      // Verify password with bcrypt
       const isMatch = await account.matchPassword(password);
       if (!isMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials. Password incorrect.' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Incorrect password. The password you entered does not match this database account.' 
+        });
       }
+
+      console.log(`🔑 [Successful Database Login] ${account.name} (${account.email}) | Role: ${isAdminAccount ? 'admin' : (account.role || 'user')}`);
 
       const token = generateToken(account);
       return res.json({
         success: true,
+        message: 'Logged in successfully from database',
         token,
         user: { 
           id: account._id, 
@@ -206,18 +223,20 @@ exports.login = async (req, res) => {
       });
     }
 
-    // In-memory fallback
-    let user = memoryUsers.find(u => u.email === email);
+    // In-memory fallback (only allowed for predefined accounts)
+    let user = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
     if (!user) {
-      user = {
-        _id: 'usr-' + Date.now(),
-        name: email.split('@')[0],
-        email,
-        password,
-        role: role || 'user',
-        favorites: []
-      };
-      memoryUsers.push(user);
+      return res.status(401).json({ 
+        success: false, 
+        message: `No account found for "${cleanEmail}" in the database. Please Sign Up first.` 
+      });
+    }
+
+    if (user.password !== password) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Incorrect password.' 
+      });
     }
 
     const token = generateToken(user);
