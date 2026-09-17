@@ -217,7 +217,7 @@ export default function Navbar({
             </button>
 
             {langDropdown && (
-              <div className="absolute right-0 mt-1.5 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl py-1.5 z-50 text-xs animate-in fade-in">
+              <div className="absolute right-0 mt-1.5 w-44 sm:w-48 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-2xl py-1.5 z-50 text-xs animate-in fade-in">
                 {languages.map((l) => (
                   <button
                     key={l.code}

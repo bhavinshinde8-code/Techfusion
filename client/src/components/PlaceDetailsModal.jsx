@@ -197,7 +197,16 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
       window.speechSynthesis.cancel();
       const textToRead = `${locPlace.title}. ${locPlace.shortHistory || ''} ${locPlace.longDescription || ''}`;
       const utterance = new SpeechSynthesisUtterance(textToRead);
-      utterance.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-IN';
+      const speechLangMap = {
+        en: 'en-IN',
+        hi: 'hi-IN',
+        mr: 'mr-IN',
+        gu: 'gu-IN',
+        bn: 'bn-IN',
+        te: 'te-IN',
+        ta: 'ta-IN'
+      };
+      utterance.lang = speechLangMap[language] || 'en-IN';
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
       utterance.onend = () => setIsPlayingAudio(false);
