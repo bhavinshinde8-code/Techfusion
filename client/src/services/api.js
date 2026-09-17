@@ -361,5 +361,15 @@ export const api = {
         }
       ];
     }
+  },
+
+  async getRegisteredUsers() {
+    try {
+      const res = await fetch(`${API_BASE}/auth/users`, { headers: getHeaders() });
+      const data = await res.json();
+      return data.data || [];
+    } catch (err) {
+      return [];
+    }
   }
 };
