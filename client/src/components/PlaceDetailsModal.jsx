@@ -1,244 +1,637 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
-  X, MapPin, Heart, Calendar, Clock, Ticket, Plane, 
-  BookOpen, ListChecks, History, FileText, CheckCircle 
+  X, MapPin, Heart, Calendar, Clock, Star, Volume2, 
+  VolumeX, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Compass, ExternalLink, Link2, Globe, Check, Plus, CheckCircle2,
+  Navigation, Share2, Sparkles, Flame, BookOpen
 } from 'lucide-react';
 
-export default function PlaceDetailsModal({ place, onClose }) {
-  const { favorites, toggleFavorite } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onAddSite }) {
+  const { favorites = [], toggleFavorite, user } = useAuth();
+  
+  // Audio Guide state
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [speechUtterance, setSpeechUtterance] = useState(null);
+
+  // Detailed Description expanded state
+  const [isDescExpanded, setIsDescExpanded] = useState(true);
+
+  // Timeline Slider state
+  const [timelineIndex, setTimelineIndex] = useState(0);
+
+  // Published toggle state
+  const [isPublished, setIsPublished] = useState(place?.isPublished !== false);
+  const [isAddedToSites, setIsAddedToSites] = useState(false);
+
+  useEffect(() => {
+    // Reset states when a new place opens
+    setTimelineIndex(0);
+    setIsPlayingAudio(false);
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    if (place) {
+      setIsPublished(place.isPublished !== false);
+    }
+  }, [place]);
+
+  // Clean up speech synthesis on unmount or close
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   if (!place) return null;
 
   const isFav = favorites.includes(place._id);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-2xl my-auto max-h-[92vh] flex flex-col text-gray-900">
-        
-        {/* Close Button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-gray-700 flex items-center justify-center hover:bg-white hover:scale-105 shadow-md transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
+  // Contextual Timeline Data
+  const defaultTimeline = [
+    {
+      year: place.era || '966 CE',
+      title: 'Foundational Royal Endowment',
+      description: `Historic patrons commission sacred stone edifices, instituting daily rituals and lasting cultural prominence for ${place.title}.`,
+      image: place.image
+    },
+    {
+      year: '1517 CE',
+      title: 'Imperial Patronage & Expansion',
+      description: `Rulers endow golden kalashas, mandapas, and vast revenue grants, elevating the monument to national heritage prominence.`,
+      image: place.image
+    },
+    {
+      year: '1933 CE',
+      title: 'Modern Preservation & Pilgrimage Circuit',
+      description: `Recognized and protected under state cultural heritage trusts with millions of international travelers visiting annually.`,
+      image: place.image
+    }
+  ];
 
-        {/* Hero Photo Banner */}
-        <div className="relative h-72 sm:h-96 shrink-0">
+  const timelineList = place.timeline && place.timeline.length > 0 ? place.timeline : defaultTimeline;
+  const currentTimeline = timelineList[Math.min(timelineIndex, timelineList.length - 1)] || timelineList[0];
+
+  // Highlights
+  const defaultHighlights = [
+    `Architectural Sanctum of ${place.title}`,
+    'Historic Basalt Stone Carvings & Heritage Sculptures',
+    'Sacred Water Kund & Scenic Natural Viewpoints',
+    'Recognized Monument of Cultural & Spiritual Eminence'
+  ];
+  const highlights = (place.keyPoints?.highlights && place.keyPoints.highlights.length > 0) 
+    ? place.keyPoints.highlights 
+    : defaultHighlights;
+
+  // Contextual Nearby Places based on destination
+  const getNearbyPlaces = () => {
+    const t = (place.title || '').toLowerCase();
+    if (t.includes('trimbak')) {
+      return [
+        { name: 'Brahmagiri Mountain Trek', dist: '1.2 km', tag: 'Scenic Viewpoint / Nature', image: '/places/anjaneri.jpg' },
+        { name: 'Kushavarta Sacred Kund', dist: '0.5 km', tag: 'Sacred Shrine', image: '/places/ramkund.jpg' },
+        { name: 'Gangadwar Godavari Spring', dist: '2.0 km', tag: 'Historic Holy Origin', image: '/places/trimbakeshwar.jpg' },
+        { name: 'Gorakhnath Gufa', dist: '3.5 km', tag: 'Ancient Hermitage Cave', image: '/places/pandavleni.jpg' }
+      ];
+    }
+    if (t.includes('sula')) {
+      return [
+        { name: 'York Winery & Tasting Room', dist: '1.8 km', tag: 'Artisan Wine Estate', image: '/places/sula-vineyards.jpg' },
+        { name: 'Gangapur Dam & Boat Club', dist: '2.5 km', tag: 'Scenic Watersports', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' },
+        { name: 'Soma Vine Village', dist: '3.0 km', tag: 'Boutique Resort & Spa', image: '/places/sula-vineyards.jpg' },
+        { name: 'Chambhar Leni Caves', dist: '9.0 km', tag: 'Jain Heritage Caves', image: '/places/pandavleni.jpg' }
+      ];
+    }
+    if (t.includes('pandavleni')) {
+      return [
+        { name: 'Dadasaheb Phalke Smarak', dist: '0.8 km', tag: 'Cultural Memorial', image: '/places/ramkund.jpg' },
+        { name: 'Buddha Vihar Meditation Hall', dist: '1.2 km', tag: 'Spiritual Center', image: '/places/pandavleni.jpg' },
+        { name: 'Nashik Botanical Garden', dist: '4.5 km', tag: 'Eco Park & Laser Show', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80' },
+        { name: 'Trimbak Heritage Circuit', dist: '22 km', tag: 'Pilgrimage Corridor', image: '/places/trimbakeshwar.jpg' }
+      ];
+    }
+    if (t.includes('anjaneri')) {
+      return [
+        { name: 'Anjaneri Temple & Peak', dist: '1.5 km', tag: 'Mythological Birthplace', image: '/places/anjaneri.jpg' },
+        { name: 'Coin Museum Anjaneri', dist: '3.2 km', tag: 'Numismatic Heritage', image: '/places/ramkund.jpg' },
+        { name: 'Trimbakeshwar Temple', dist: '7.0 km', tag: 'Sacred Jyotirlinga', image: '/places/trimbakeshwar.jpg' },
+        { name: 'Vaitarna Dam Catchment', dist: '14 km', tag: 'Scenic Water Body', image: '/places/sula-vineyards.jpg' }
+      ];
+    }
+    // Default / Tirupati / Generic matching screenshot
+    return [
+      { name: 'Sri Padmavathi Ammavari Temple', dist: '5.0 km', tag: 'Sacred Shrine', image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Chandragiri Fort', dist: '14.5 km', tag: 'Heritage Monument', image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Silathoranam Natural Arch', dist: '1.5 km', tag: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=400&q=80' },
+      { name: 'Kapila Theertham Waterfall Temple', dist: '2.5 km', tag: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' }
+    ];
+  };
+
+  // Contextual Historical Circuits
+  const getHistoricalCircuits = () => {
+    const t = (place.title || '').toLowerCase();
+    if (t.includes('trimbak') || t.includes('ramkund')) {
+      return [
+        {
+          title: 'All-India 12 Jyotirlinga Circuit',
+          circuit: 'Peshwa Shiva Heritage Corridor',
+          description: 'Shares sacred spiritual synergy with Somnath, Mahakaleshwar, and Kashi Vishwanath as an immortal jyotirlinga source of the Godavari.'
+        },
+        {
+          title: 'Simhastha Kumbh Mela Circuit',
+          circuit: 'Panchavati Godavari Sacred Trail',
+          description: 'Historically linked with Ujjain, Haridwar, and Prayagraj where millions of sadhus assemble every 12 years along the holy riverbanks.'
+        }
+      ];
+    }
+    if (t.includes('sula')) {
+      return [
+        {
+          title: 'Nashik Valley Agro-Viticulture Circuit',
+          circuit: 'Maharashtra Wine Capital Route',
+          description: 'Pioneering route connecting artisanal vineyards, micro-distilleries, and Sahyadri terroir agro-tourism.'
+        },
+        {
+          title: 'Western Sahyadri Eco-Tourism Trail',
+          circuit: 'Gangapur Dam Water Heritage',
+          description: 'Integrated ecological corridor combining lake water sports, bird sanctuaries, and organic vineyard estates.'
+        }
+      ];
+    }
+    // Default matching screenshot
+    return [
+      {
+        title: 'Srirangam Ranganathaswamy',
+        circuit: 'Southern Vaishnavite Divya Desam Circuit',
+        description: 'Both temples share profound historic patronage under the Cholas and Vijayanagara empires and stand as premier Divya Desam shrines dedicated to Vishnu.'
+      },
+      {
+        title: 'Sri Kalahasteeswara Temple',
+        circuit: 'Pancha Bhoota Stalam Circuit',
+        description: 'Historically linked as the dual spiritual gateways of the region, where pilgrims traditionally visit Kalahasti (representing Wind) alongside Tirupati.'
+      }
+    ];
+  };
+
+  const nearbyPlaces = getNearbyPlaces();
+  const historicalCircuits = getHistoricalCircuits();
+
+  // Audio Guide Narration Handler
+  const toggleAudioGuide = () => {
+    if (!window.speechSynthesis) {
+      alert('Speech synthesis is not supported on this browser.');
+      return;
+    }
+
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    } else {
+      window.speechSynthesis.cancel();
+      const textToRead = `${place.title}. Located in ${place.state}. ${place.shortHistory || ''} ${place.longDescription || ''}`;
+      const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      setSpeechUtterance(utterance);
+      window.speechSynthesis.speak(utterance);
+      setIsPlayingAudio(true);
+    }
+  };
+
+  const handleTogglePublishInternal = () => {
+    const nextVal = !isPublished;
+    setIsPublished(nextVal);
+    if (onTogglePublish) {
+      onTogglePublish(place._id, nextVal);
+    }
+  };
+
+  const handleAddSiteClick = () => {
+    setIsAddedToSites(true);
+    toggleFavorite(place._id);
+    if (onAddSite) {
+      onAddSite(place);
+    }
+    setTimeout(() => setIsAddedToSites(false), 2500);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-md animate-in fade-in overflow-y-auto">
+      
+      {/* Main Modal Container (Exact layout of screenshot) */}
+      <div className="relative w-full max-w-2xl sm:max-w-3xl bg-white border border-gray-200/90 rounded-3xl overflow-hidden shadow-2xl my-auto max-h-[94vh] flex flex-col text-gray-900 font-sans">
+        
+        {/* ========================================================================= */}
+        {/* 1. HERO PHOTO BANNER */}
+        {/* ========================================================================= */}
+        <div className="relative h-64 sm:h-72 md:h-80 w-full overflow-hidden shrink-0 select-none">
           <img 
             src={place.image} 
             alt={place.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/30 to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1322] via-black/40 to-black/20" />
 
-          {/* Place Title & Location Over Image */}
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/95 text-amber-700 border border-amber-300 shadow-sm uppercase tracking-wider">
-                {place.category}
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm">
-                {place.era}
-              </span>
+          {/* Top Left Rating Badge (Matching screenshot) */}
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff8c00] text-black font-black text-xs shadow-lg uppercase tracking-wide">
+            <Star className="w-3.5 h-3.5 fill-black stroke-black" />
+            <span>4.9 (15420+ REVIEWS)</span>
+          </div>
+
+          {/* Top Right Close Button (Matching screenshot) */}
+          <button 
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white text-gray-800 flex items-center justify-center hover:bg-gray-100 shadow-xl transition cursor-pointer hover:scale-105"
+            title="Close Details"
+          >
+            <X className="w-5 h-5 stroke-[2.5]" />
+          </button>
+
+          {/* Bottom Left Title, Tag, and Location */}
+          <div className="absolute bottom-5 left-5 right-5 z-10 text-white space-y-1">
+            <div className="text-[11px] font-extrabold uppercase tracking-widest text-[#ffaa33] drop-shadow-sm">
+              {place.category ? place.category.toUpperCase() : 'ANCIENT VAISHNAVITE SHRINE'}
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-serif text-3xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-                  {place.title}
-                </h2>
-                <div className="flex items-center gap-1.5 text-sm text-amber-800 font-semibold mt-1">
-                  <MapPin className="w-4 h-4 text-amber-600" />
-                  {place.state}
-                </div>
-              </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-md">
+              {place.title}
+            </h1>
 
-              <button 
-                onClick={() => toggleFavorite(place._id)}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition shrink-0 ${
-                  isFav 
-                    ? 'bg-red-50 border-red-300 text-red-500 shadow-sm' 
-                    : 'bg-white/90 border-gray-200 text-gray-600 hover:text-red-500 shadow-sm'
-                }`}
-                title={isFav ? "Saved to Wishlist" : "Add to Wishlist"}
-              >
-                <Heart className={`w-6 h-6 ${isFav ? 'fill-current' : ''}`} />
-              </button>
+            <div className="flex items-center gap-1.5 text-xs text-slate-200 font-semibold pt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-amber-400" />
+              <span>{place.state}</span>
             </div>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 px-6 bg-slate-50 flex gap-2 sm:gap-6 overflow-x-auto shrink-0">
-          <button 
-            onClick={() => setActiveTab('overview')}
-            className={`py-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-              activeTab === 'overview' 
-                ? 'border-amber-500 text-amber-700' 
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            History & Overview
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('keypoints')}
-            className={`py-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-              activeTab === 'keypoints' 
-                ? 'border-amber-500 text-amber-700' 
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <ListChecks className="w-4 h-4" />
-            Key Visitor Points
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('timeline')}
-            className={`py-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-              activeTab === 'timeline' 
-                ? 'border-amber-500 text-amber-700' 
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Historical Timeline ({place.timeline?.length || 0})
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('description')}
-            className={`py-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
-              activeTab === 'description' 
-                ? 'border-amber-500 text-amber-700' 
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Long Description
-          </button>
-        </div>
-
-        {/* Tab Content Body */}
-        <div className="p-6 sm:p-8 overflow-y-auto flex-1 text-gray-700 space-y-6">
+        {/* ========================================================================= */}
+        {/* SCROLLABLE BODY CONTENT */}
+        {/* ========================================================================= */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 bg-[#fafbfc]">
           
-          {/* 1. OVERVIEW & SHORT HISTORY */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6 animate-in fade-in">
-              <div>
-                <h4 className="font-serif text-lg font-bold text-gray-900 mb-2">
-                  Short History & Origin
-                </h4>
-                <div className="p-5 rounded-2xl bg-amber-50/70 border-l-4 border-amber-500 text-gray-800 text-sm sm:text-base leading-relaxed">
-                  {place.shortHistory}
+          {/* --------------------------------------------------------------------- */}
+          {/* 2. KEY FEATURES & HIGHLIGHTS */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="space-y-2">
+            <div className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+              KEY FEATURES & HIGHLIGHTS
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {highlights.map((h, i) => (
+                <div 
+                  key={i}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-50/80 border border-amber-300 text-amber-950 flex items-center gap-1.5 shadow-xs"
+                >
+                  <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                  <span>{h}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* --------------------------------------------------------------------- */}
+          {/* 3. DETAILED DESCRIPTION CARD (In-Depth Heritage & Tourist Guide) */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+            
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">
+                    Detailed Description (In-Depth Heritage & Tourist Guide)
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    Click to expand text / listen to audio guide in your selected language
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-serif text-lg font-bold text-gray-900 mb-3">
-                  Top Highlights
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleAudioGuide}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold flex items-center gap-1 border transition cursor-pointer ${
+                    isPlayingAudio
+                      ? 'bg-amber-500 text-black border-amber-500 shadow-sm animate-pulse'
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+                  }`}
+                  title="Listen to narrated audio guide"
+                >
+                  {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{isPlayingAudio ? 'Stop Audio' : 'Play Audio'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDescExpanded(!isDescExpanded)}
+                  className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                >
+                  <span>{isDescExpanded ? 'Read Less' : 'Read More'}</span>
+                  {isDescExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Collapsible Content */}
+            {isDescExpanded && (
+              <div className="pt-2 border-t border-gray-100 space-y-3 animate-in fade-in text-xs sm:text-[13px] text-gray-700 leading-relaxed">
+                <p>
+                  {place.longDescription || place.shortHistory || 'Comprehensive historical archive detailing patronage, Vedic origins, and architectural evolution.'}
+                </p>
+                {place.shortHistory && place.longDescription && (
+                  <p className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-gray-600 italic">
+                    "{place.shortHistory}"
+                  </p>
+                )}
+              </div>
+            )}
+
+          </div>
+
+          {/* --------------------------------------------------------------------- */}
+          {/* 4. VISUAL TIMELINE (YEAR-BY-YEAR ERA SLIDER) */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-4">
+            
+            {/* Header with Counter Badge */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">
+                    VISUAL TIMELINE (YEAR-BY-YEAR ERA SLIDER)
+                  </h3>
+                  <p className="text-[10px] text-gray-500">
+                    Slide to travel through historical eras of {place.title}
+                  </p>
+                </div>
+              </div>
+
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-300">
+                {timelineIndex + 1} / {timelineList.length}
+              </span>
+            </div>
+
+            {/* Slider Track Progress Bar */}
+            <div className="space-y-1.5 pt-1">
+              <div className="relative w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
+                  style={{ width: `${((timelineIndex + 1) / timelineList.length) * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                <span>{timelineList[0]?.year || 'Ancient Era'}</span>
+                <span>{timelineList[timelineList.length - 1]?.year || 'Present Era'}</span>
+              </div>
+            </div>
+
+            {/* Current Era Card */}
+            <div className="p-3.5 sm:p-4 rounded-2xl border border-gray-200 bg-slate-50/50 flex flex-col sm:flex-row items-center gap-4">
+              
+              {/* Left Box: Real Image or Era Box */}
+              <div className="w-full sm:w-36 h-24 rounded-xl bg-slate-800 text-white flex flex-col items-center justify-center p-2 text-center shrink-0 border border-slate-700 overflow-hidden relative shadow-inner">
+                {currentTimeline.image ? (
+                  <img src={currentTimeline.image} alt={currentTimeline.title} className="w-full h-full object-cover rounded-lg" />
+                ) : (
+                  <>
+                    <Calendar className="w-5 h-5 text-amber-400 mb-1" />
+                    <span className="text-[10px] font-bold text-slate-300 leading-tight">Era Milestone</span>
+                    <span className="text-[9px] text-slate-400">{currentTimeline.year}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Right Content */}
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500 text-black text-[10px] font-black uppercase">
+                  {currentTimeline.year}
+                </div>
+                <h4 className="font-bold text-sm text-gray-900">
+                  {currentTimeline.title}
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {place.keyPoints?.highlights?.map((h, i) => (
-                    <div key={i} className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-gray-800 font-medium">
-                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>{h}</span>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {currentTimeline.description}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Navigation Buttons (Previous / Next) */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                disabled={timelineIndex === 0}
+                onClick={() => setTimelineIndex(prev => Math.max(0, prev - 1))}
+                className={`px-4 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  timelineIndex === 0
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                    : 'border-gray-300 text-gray-800 hover:bg-gray-100 bg-white shadow-xs'
+                }`}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous Era</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={timelineIndex === timelineList.length - 1}
+                onClick={() => setTimelineIndex(prev => Math.min(timelineList.length - 1, prev + 1))}
+                className={`px-4 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  timelineIndex === timelineList.length - 1
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                    : 'border-amber-400 text-amber-900 hover:bg-amber-100 bg-amber-50 shadow-xs'
+                }`}
+              >
+                <span>Next Era</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
+
+          {/* --------------------------------------------------------------------- */}
+          {/* 5. NEARBY PLACES TO VISIT (WITHIN 15KM) */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-amber-600" />
+                <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 uppercase tracking-wide">
+                  NEARBY PLACES TO VISIT (WITHIN 15KM)
+                </h3>
+              </div>
+              <span className="text-[10px] text-gray-400 font-medium">Click to navigate</span>
+            </div>
+
+            {/* 2x2 Grid of Nearby Places */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {nearbyPlaces.map((near, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    const query = encodeURIComponent(`${near.name}, ${place.state}`);
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                  }}
+                  className="flex items-center justify-between p-2.5 rounded-2xl border border-gray-200/90 hover:border-amber-400 hover:bg-amber-50/40 transition cursor-pointer group shadow-xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img 
+                      src={near.image} 
+                      alt={near.name} 
+                      className="w-11 h-11 rounded-xl object-cover border border-gray-200 shrink-0" 
+                    />
+                    <div className="min-w-0">
+                      <div className="font-bold text-xs text-gray-900 truncate group-hover:text-amber-700">
+                        {near.name}
+                      </div>
+                      <div className="text-[10px] text-gray-500 truncate mt-0.5">
+                        <span className="font-bold text-amber-700">{near.dist}</span> • {near.tag}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+                  </div>
 
-          {/* 2. KEY VISITOR POINTS */}
-          {activeTab === 'keypoints' && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-wider text-gray-500 font-bold">Best Time to Visit</div>
-                    <div className="text-sm font-bold text-gray-900 mt-1">{place.keyPoints?.bestTime || 'October to March'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-wider text-gray-500 font-bold">Visiting Timings</div>
-                    <div className="text-sm font-bold text-gray-900 mt-1">{place.keyPoints?.timings || 'Sunrise to Sunset'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Ticket className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-wider text-gray-500 font-bold">Entry Tariff</div>
-                    <div className="text-sm font-bold text-gray-900 mt-1">{place.keyPoints?.entryFee || '₹50 (Indians), ₹600 (Foreigners)'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Plane className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-wider text-gray-500 font-bold">Nearest Transit</div>
-                    <div className="text-sm font-bold text-gray-900 mt-1">{place.keyPoints?.nearestTransit || 'Local Airport & Railway'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 3. INTERACTIVE HISTORICAL TIMELINE */}
-          {activeTab === 'timeline' && (
-            <div className="relative pl-8 space-y-6 animate-in fade-in py-2">
-              {/* Vertical Spine */}
-              <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-gradient-to-b from-amber-500 via-amber-300 to-amber-100" />
-
-              {place.timeline?.map((item, idx) => (
-                <div key={idx} className="relative group">
-                  {/* Node */}
-                  <div className="absolute -left-8 top-1.5 w-5 h-5 rounded-full bg-amber-500 border-4 border-white shadow-md group-hover:scale-125 transition-transform" />
-
-                  {/* Card */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 group-hover:border-amber-400 transition">
-                    <span className="inline-block px-3 py-0.5 rounded-full text-xs font-bold font-serif bg-amber-100 text-amber-800 border border-amber-200 mb-2">
-                      {item.year}
-                    </span>
-                    <h5 className="text-base font-bold text-gray-900 mb-1.5">
-                      {item.title}
-                    </h5>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {item.description}
-                    </p>
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 group-hover:bg-amber-500 group-hover:text-black transition shrink-0 ml-1.5">
+                    <Navigation className="w-3 h-3" />
                   </div>
                 </div>
               ))}
             </div>
-          )}
 
-          {/* 4. LONG IN-DEPTH DESCRIPTION */}
-          {activeTab === 'description' && (
-            <div className="space-y-4 animate-in fade-in">
-              <h4 className="font-serif text-lg font-bold text-gray-900">
-                Cultural & Architectural Heritage
-              </h4>
-              <p className="text-sm sm:text-base leading-relaxed text-gray-700 whitespace-pre-line">
-                {place.longDescription}
-              </p>
+          </div>
+
+          {/* --------------------------------------------------------------------- */}
+          {/* 6. CO-RELATED HISTORICAL CIRCUITS & HERITAGE LINKS */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="bg-white rounded-2xl border border-gray-200/90 p-4 sm:p-5 shadow-xs space-y-3">
+            
+            <div className="flex items-center gap-2">
+              <Link2 className="w-4 h-4 text-amber-600" />
+              <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 uppercase tracking-wide">
+                CO-RELATED HISTORICAL CIRCUITS & HERITAGE LINKS
+              </h3>
             </div>
-          )}
+
+            {/* 2 Column Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {historicalCircuits.map((circ, idx) => (
+                <div key={idx} className="p-3.5 rounded-2xl border border-gray-200/90 bg-slate-50/50 space-y-2">
+                  <div className="space-y-1">
+                    <div className="font-bold text-xs text-gray-900">
+                      {circ.title}
+                    </div>
+                    <span className="inline-block px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold">
+                      {circ.circuit}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 leading-relaxed">
+                    {circ.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+
+          {/* --------------------------------------------------------------------- */}
+          {/* 7. LIVE DESTINATION WEB RESOURCE */}
+          {/* --------------------------------------------------------------------- */}
+          <div className="bg-amber-50/60 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-gray-900">
+                  Live Destination Web Resource
+                </h4>
+                <p className="text-[11px] text-gray-500">
+                  Explore real-time encyclopedia articles, historical archives, and guide pages on the web.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <a
+                href={`https://en.wikipedia.org/wiki/${encodeURIComponent(place.title)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shadow-sm transition"
+              >
+                <span>READ WEB GUIDE</span>
+                <ExternalLink className="w-3 h-3 stroke-[2.5]" />
+              </a>
+
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(place.title + ' ' + place.state)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs border border-gray-300 flex items-center gap-1 shadow-xs transition"
+              >
+                <span>Google</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 8. BOTTOM STICKY ACTION BAR (Matches screenshot exactly) */}
+        {/* ========================================================================= */}
+        <div className="bg-[#0e1322] text-white p-3.5 sm:p-4 rounded-b-3xl border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xl">
+          
+          {/* Left Checkbox: Publish */}
+          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-slate-300 hover:text-white transition">
+            <input 
+              type="checkbox"
+              checked={isPublished}
+              onChange={handleTogglePublishInternal}
+              className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer accent-[#ff8c00]"
+            />
+            <span>Publish <span className="hidden sm:inline font-normal text-slate-400">(Accessible to Users on Website)</span></span>
+          </label>
+
+          {/* Right Action Buttons: Add to Sites + Close */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleAddSiteClick}
+              className="px-4 py-2 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wide flex items-center gap-1.5 shadow-md hover:scale-105 transition cursor-pointer"
+            >
+              {isAddedToSites ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>SAVED TO SITES!</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>ADD TO SITES</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-gray-900 font-bold text-xs transition border border-slate-200 shadow-sm cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
 
         </div>
 
