@@ -241,7 +241,7 @@ export default function Navbar({
             <div className="flex items-center gap-1.5 sm:gap-2">
               {user.role === 'admin' ? (
                 <>
-                  {/* View Website Button (matching screenshot) */}
+                  {/* View Website Button */}
                   <button
                     onClick={() => {
                       setCurrentView('landing');
@@ -256,20 +256,6 @@ export default function Navbar({
                   >
                     <Globe className="w-3.5 h-3.5 text-amber-700" />
                     <span>View Website</span>
-                  </button>
-
-                  {/* Traveler Hub Button (matching screenshot) */}
-                  <button
-                    onClick={() => setCurrentView('user-dashboard')}
-                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold tracking-wide uppercase transition cursor-pointer border ${
-                      currentView === 'user-dashboard'
-                        ? 'bg-amber-500 text-black border-amber-500 shadow-sm'
-                        : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
-                    }`}
-                    title="Open Traveler Hub"
-                  >
-                    <User className="w-3.5 h-3.5 text-gray-600" />
-                    <span>Traveler Hub</span>
                   </button>
 
                   {/* Admin Suite Button (if on other views) */}
