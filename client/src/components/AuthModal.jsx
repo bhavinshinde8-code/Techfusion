@@ -78,7 +78,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
         <div className="p-1 rounded-xl bg-gray-50 border border-gray-200/80 grid grid-cols-2 gap-1 mb-3">
           <button
             type="button"
-            onClick={() => setPortal('user')}
+            onClick={() => { setPortal('user'); setError(''); }}
             className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               portal === 'user'
                 ? 'bg-amber-500 text-black shadow-sm'
@@ -91,7 +91,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
 
           <button
             type="button"
-            onClick={() => setPortal('admin')}
+            onClick={() => { setPortal('admin'); setTab('login'); setLoginMethod('email'); setError(''); }}
             className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               portal === 'admin'
                 ? 'bg-amber-500 text-black shadow-sm'
@@ -103,57 +103,72 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
           </button>
         </div>
 
-        {/* Tabs: Log In vs Sign Up (SMS OTP) */}
-        <div className="grid grid-cols-2 border-b border-gray-200 mb-2.5">
-          <button
-            type="button"
-            onClick={() => setTab('login')}
-            className={`pb-1.5 text-xs sm:text-sm font-bold text-center transition relative ${
-              tab === 'login'
-                ? 'text-amber-600 border-b-2 border-amber-500'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('signup')}
-            className={`pb-1.5 text-xs sm:text-sm font-bold text-center transition relative ${
-              tab === 'signup'
-                ? 'text-amber-600 border-b-2 border-amber-500'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            Sign Up (SMS OTP)
-          </button>
-        </div>
+        {/* Tabs: Traveler gets Log In / Sign Up, Admin only gets Log In */}
+        {portal === 'admin' ? (
+          <div className="border-b-2 border-amber-500 mb-2.5 pb-2 text-center">
+            <span className="text-xs sm:text-sm font-black text-amber-600 tracking-wider uppercase flex items-center justify-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-amber-600" />
+              Admin Portal Log In
+            </span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 border-b border-gray-200 mb-2.5">
+            <button
+              type="button"
+              onClick={() => setTab('login')}
+              className={`pb-1.5 text-xs sm:text-sm font-bold text-center transition relative ${
+                tab === 'login'
+                  ? 'text-amber-600 border-b-2 border-amber-500'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('signup')}
+              className={`pb-1.5 text-xs sm:text-sm font-bold text-center transition relative ${
+                tab === 'signup'
+                  ? 'text-amber-600 border-b-2 border-amber-500'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Sign Up (SMS OTP)
+            </button>
+          </div>
+        )}
 
-        {/* Method Indicator: • Email & Password | • SMS OTP Login */}
-        <div className="flex items-center justify-center gap-3 text-[11px] font-semibold mb-3">
-          <button
-            type="button"
-            onClick={() => setLoginMethod('email')}
-            className={`transition flex items-center gap-1 ${
-              loginMethod === 'email'
-                ? 'text-amber-600 font-bold'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <span>•</span> Email & Password
-          </button>
-          <button
-            type="button"
-            onClick={() => setLoginMethod('otp')}
-            className={`transition flex items-center gap-1 ${
-              loginMethod === 'otp'
-                ? 'text-amber-600 font-bold'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <span>•</span> SMS OTP Login
-          </button>
-        </div>
+        {/* Method Indicator: Email vs SMS OTP (only for travelers) */}
+        {portal === 'user' ? (
+          <div className="flex items-center justify-center gap-3 text-[11px] font-semibold mb-3">
+            <button
+              type="button"
+              onClick={() => setLoginMethod('email')}
+              className={`transition flex items-center gap-1 ${
+                loginMethod === 'email'
+                  ? 'text-amber-600 font-bold'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <span>•</span> Email & Password
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMethod('otp')}
+              className={`transition flex items-center gap-1 ${
+                loginMethod === 'otp'
+                  ? 'text-amber-600 font-bold'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <span>•</span> SMS OTP Login
+            </button>
+          </div>
+        ) : (
+          <div className="text-center text-[10px] font-bold text-amber-700 bg-amber-50/80 border border-amber-200/70 rounded-lg py-1 px-2 mb-3 flex items-center justify-center gap-1">
+            <span>•</span> Authorized Accounts: bhavinshinde8@gmail.com | admin@techfusion.com
+          </div>
+        )}
 
         {error && (
           <div className="mb-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs">
@@ -266,32 +281,38 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
           </button>
         </div>
 
-        {/* Footer Link matching screenshot */}
-        <div className="text-center mt-3 text-[11px] text-gray-600 font-medium">
-          {tab === 'login' ? (
-            <span>
-              Don't have an account yet?{' '}
-              <button
-                type="button"
-                onClick={() => setTab('signup')}
-                className="text-[#ff8c00] font-bold hover:underline cursor-pointer"
-              >
-                Sign Up with SMS OTP
-              </button>
-            </span>
-          ) : (
-            <span>
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setTab('login')}
-                className="text-[#ff8c00] font-bold hover:underline cursor-pointer"
-              >
-                Log In
-              </button>
-            </span>
-          )}
-        </div>
+        {/* Footer Link: Only provide sign up switch for travelers */}
+        {portal === 'admin' ? (
+          <div className="text-center mt-3 text-[11px] text-gray-500 font-medium bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+            🔒 Public registration is disabled for Admin Portal. Only authorized administrators with assigned credentials can log in.
+          </div>
+        ) : (
+          <div className="text-center mt-3 text-[11px] text-gray-600 font-medium">
+            {tab === 'login' ? (
+              <span>
+                Don't have an account yet?{' '}
+                <button
+                  type="button"
+                  onClick={() => setTab('signup')}
+                  className="text-[#ff8c00] font-bold hover:underline cursor-pointer"
+                >
+                  Sign Up with SMS OTP
+                </button>
+              </span>
+            ) : (
+              <span>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => setTab('login')}
+                  className="text-[#ff8c00] font-bold hover:underline cursor-pointer"
+                >
+                  Log In
+                </button>
+              </span>
+            )}
+          </div>
+        )}
 
       </div>
     </div>
