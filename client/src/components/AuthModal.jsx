@@ -139,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
         )}
 
         {/* Method Indicator: Email vs SMS OTP (only for travelers) */}
-        {portal === 'user' ? (
+        {portal === 'user' && (
           <div className="flex items-center justify-center gap-3 text-[11px] font-semibold mb-3">
             <button
               type="button"
@@ -163,10 +163,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
             >
               <span>•</span> SMS OTP Login
             </button>
-          </div>
-        ) : (
-          <div className="text-center text-[10px] font-bold text-amber-700 bg-amber-50/80 border border-amber-200/70 rounded-lg py-1 px-2 mb-3 flex items-center justify-center gap-1">
-            <span>•</span> Authorized Accounts: bhavinshinde8@gmail.com | admin@techfusion.com
           </div>
         )}
 
@@ -199,14 +195,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
 
           <div>
             <label className="block text-[11px] font-bold text-gray-800 mb-1">
-              Email Address or Phone Number
+              {portal === 'admin' ? 'Administrator Email Address' : 'Email Address or Phone Number'}
             </label>
             <div className="relative">
               <Mail className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-3" />
               <input
                 type="text"
                 required
-                placeholder={portal === 'admin' ? "bhavinshinde8@gmail.com or admin@techfusion.com" : "traveler@example.com or phone"}
+                placeholder={portal === 'admin' ? "Enter administrator email" : "traveler@example.com or phone"}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-xs placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:bg-white transition"
