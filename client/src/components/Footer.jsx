@@ -80,8 +80,15 @@ export default function Footer({ setCurrentView }) {
 
         {/* Bottom Bar */}
         <div className="pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 gap-2">
-          <p>© 2026Phoenix Tourism Portal. All rights reserved.</p>
-          <p>Designed with React & Tailwind CSS for SIH Tourism Innovation</p>
+          <div className="flex items-center gap-3">
+            <p>© 2026 Phoenix Tourism Portal. All rights reserved.</p>
+            <span className="hidden sm:inline text-gray-300">•</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium text-[10px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>DB: MongoDB Connected (phoenix_tourism)</span>
+            </div>
+          </div>
+          <p>Designed with React, Node.js & MongoDB</p>
         </div>
 
       </div>

@@ -32,6 +32,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Database Connection Status Route
+app.get('/api/db-status', (req, res) => {
+  const mongoose = require('mongoose');
+  const { getIsConnected } = require('./config/db');
+  const stateNames = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
+  const stateId = mongoose.connection.readyState;
+  res.json({
+    success: true,
+    connected: getIsConnected() && stateId === 1,
+    status: stateId === 1 ? 'connected' : 'disconnected',
+    state: stateNames[stateId] || 'Unknown',
+    database: mongoose.connection.name || 'phoenix_tourism',
+    host: mongoose.connection.host || '127.0.0.1',
+    port: mongoose.connection.port || 27017,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
