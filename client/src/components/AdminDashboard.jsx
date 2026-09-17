@@ -274,19 +274,18 @@ export default function AdminDashboard({
     if (!formData.title && !formData.qrCode) return;
     const siteCode = formData.qrCode || `TOUR-${(formData.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
     const payload = JSON.stringify({
-      app: 'Techfusion',
-      type: 'TOURISM_DESTINATION',
-      id: selectedId || (formData.title ? `site-${formData.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : 'site-custom'),
+      techfusion: true,
+      id: selectedId || '',
       title: formData.title,
-      code: siteCode,
-      state: formData.state || 'Maharashtra, India'
+      code: siteCode
     });
 
     QRCode.toDataURL(payload, {
       width: 400,
       margin: 2,
+      errorCorrectionLevel: 'M',
       color: {
-        dark: '#0f172a',
+        dark: '#000000',
         light: '#ffffff'
       }
     }).then(url => {
@@ -294,7 +293,7 @@ export default function AdminDashboard({
     }).catch(err => {
       console.warn('QR generation error:', err);
     });
-  }, [formData.title, formData.qrCode, selectedId, formData.state]);
+  }, [formData.title, formData.qrCode, selectedId]);
 
   // QR Code Actions
   const handleDownloadQR = () => {

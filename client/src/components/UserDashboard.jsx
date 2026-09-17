@@ -38,6 +38,7 @@ export default function UserDashboard({
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const isScanningRef = useRef(false);
 
   // Initial history items matching user's screenshot
   const [historyItems, setHistoryItems] = useState([
@@ -91,15 +92,18 @@ export default function UserDashboard({
     destinations.forEach(async (site) => {
       const siteCode = site.qrCode || `TOUR-${(site.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
       const payload = JSON.stringify({
-        app: 'Techfusion',
-        type: 'TOURISM_DESTINATION',
-        id: site._id,
+        techfusion: true,
+        id: site._id || '',
         title: site.title,
-        code: siteCode,
-        state: site.state || 'Maharashtra, India'
+        code: siteCode
       });
       try {
-        const url = await QRCode.toDataURL(payload, { width: 140, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } });
+        const url = await QRCode.toDataURL(payload, { 
+          width: 140, 
+          margin: 1, 
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' } 
+        });
         setSiteQrs(prev => ({ ...prev, [site._id || site.title]: url }));
       } catch (e) {}
     });
@@ -118,26 +122,33 @@ export default function UserDashboard({
     setCameraError('');
     setIsScanning(true);
     setScanSuccess(false);
+    isScanningRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         await videoRef.current.play();
         setCameraActive(true);
-        requestAnimationFrame(tickScan);
+        animationFrameRef.current = requestAnimationFrame(tickScan);
       }
     } catch (err) {
       console.warn('Camera access error:', err);
       setCameraError('Camera access denied or unavailable. Please use the Upload QR Image or Tap to Scan options below.');
       setIsScanning(false);
       setCameraActive(false);
+      isScanningRef.current = false;
     }
   };
 
   const stopCamera = () => {
+    isScanningRef.current = false;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
       const tracks = stream.getTracks();
@@ -146,22 +157,40 @@ export default function UserDashboard({
     }
     setCameraActive(false);
     setIsScanning(false);
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
   };
 
-  const tickScan = () => {
+  const tickScan = async () => {
+    if (!isScanningRef.current) return;
+
     if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
       const canvas = canvasRef.current;
       if (canvas) {
-        const ctx = canvas.getContext('2d');
-        canvas.height = videoRef.current.videoHeight;
-        canvas.width = videoRef.current.videoWidth;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const vw = videoRef.current.videoWidth;
+        const vh = videoRef.current.videoHeight;
+        
+        // Scale for optimal scanning performance
+        const scale = Math.min(1, 640 / Math.max(vw, vh));
+        canvas.width = Math.floor(vw * scale);
+        canvas.height = Math.floor(vh * scale);
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+        // 1. Try native BarcodeDetector API
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await detector.detect(canvas);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              handleProcessScannedData(barcodes[0].rawValue);
+              return;
+            }
+          } catch(e) {}
+        }
+
+        // 2. Try jsQR with inversion attempts
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert'
+          inversionAttempts: 'attemptBoth'
         });
         if (code && code.data) {
           handleProcessScannedData(code.data);
@@ -169,7 +198,8 @@ export default function UserDashboard({
         }
       }
     }
-    if (cameraActive) {
+
+    if (isScanningRef.current) {
       animationFrameRef.current = requestAnimationFrame(tickScan);
     }
   };
@@ -182,23 +212,70 @@ export default function UserDashboard({
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        const maxDim = 800;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // 1. Try BarcodeDetector
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await detector.detect(canvas);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              handleProcessScannedData(barcodes[0].rawValue);
+              return;
+            }
+          } catch(err) {}
+        }
+
+        // 2. Try jsQR
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        });
         if (code && code.data) {
           handleProcessScannedData(code.data);
-        } else {
-          setCameraError('No readable QR code found in this image. Please upload a clear QR code downloaded from the Admin Dashboard.');
+          return;
         }
+
+        // 3. Fallback to original dimensions if needed
+        if (img.width !== w || img.height !== h) {
+          const origCanvas = document.createElement('canvas');
+          origCanvas.width = img.width;
+          origCanvas.height = img.height;
+          const origCtx = origCanvas.getContext('2d');
+          origCtx.drawImage(img, 0, 0);
+          const origImgData = origCtx.getImageData(0, 0, img.width, img.height);
+          const origCode = jsQR(origImgData.data, origImgData.width, origImgData.height, {
+            inversionAttempts: 'attemptBoth'
+          });
+          if (origCode && origCode.data) {
+            handleProcessScannedData(origCode.data);
+            return;
+          }
+        }
+
+        setCameraError('No readable QR code found in this image. Please upload a clear QR code downloaded from the Admin Dashboard.');
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Main QR Data Processing Engine
@@ -282,6 +359,7 @@ export default function UserDashboard({
       setCameraError('Unrecognized QR code. Please scan a valid Team Phoenix monument QR code.');
     }
   };
+
 
   // Audio Guide Player for Scanned Card
   const toggleAudioGuide = (place) => {
