@@ -76,6 +76,8 @@ export default function App() {
         setCurrentView={setCurrentView}
         openAuthModal={handleOpenAuth}
         openWishlistModal={() => setIsWishlistOpen(true)}
+        destinations={destinations}
+        onSelectPlace={(place) => setSelectedPlace(place)}
       />
 
       {/* VIEW 1: LANDING PAGE */}
