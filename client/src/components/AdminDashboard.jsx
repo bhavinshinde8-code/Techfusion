@@ -6,7 +6,8 @@ import {
   CheckCircle, ExternalLink, Plus, LogOut, MapPin, 
   Shield, ArrowRight, ChevronUp, ChevronRight, Star, 
   X, Edit, Trash2, Clock, Sparkles, Globe, Eye,
-  CheckCircle2, AlertCircle, RefreshCw, Landmark, Award, Flame
+  CheckCircle2, AlertCircle, RefreshCw, Landmark, Award, Flame,
+  QrCode, Download
 } from 'lucide-react';
 
 export default function AdminDashboard({ 
@@ -40,23 +41,34 @@ export default function AdminDashboard({
 
   const [formData, setFormData] = useState({
     title: '',
+    badge: '',
     state: '',
-    category: 'UNESCO Heritage',
-    era: '',
+    bestTime: '',
     image: '',
     shortHistory: '',
     longDescription: '',
-    bestTime: '',
-    timings: '',
-    entryFee: '',
     highlights: '',
-    nearestTransit: '',
     isTrending: false,
     isPublished: true,
-    timeline: [
-      { year: '12th Century CE', title: 'Monument Foundation', description: 'Built by patron dynasty.' },
-      { year: 'Modern Era', title: 'Heritage Inscription', description: 'Recognized as an iconic tourism wonder.' }
-    ]
+    hiddenHistory: '',
+    qrCode: '',
+    timeline: [],
+    nearbyPlaces: [],
+    coRelatedPlaces: [],
+    category: 'UNESCO Heritage',
+    era: '',
+    timings: '',
+    entryFee: '',
+    nearestTransit: ''
+  });
+
+  // Sub-modal for adding/editing Timeline Eras, Nearby Places, Co-Related Places
+  const [subModal, setSubModal] = useState({
+    isOpen: false,
+    type: null, // 'timeline' | 'nearby' | 'coRelated'
+    mode: 'add',
+    index: null,
+    item: {}
   });
 
   useEffect(() => {
@@ -170,23 +182,37 @@ export default function AdminDashboard({
     setSelectedId(null);
     setFormData({
       title: '',
-      state: 'Nashik, Maharashtra',
-      category: 'Spiritual & Temples',
-      era: 'Ancient / Modern',
-      image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=1200&q=80',
+      badge: 'Oldest Surviving Fort in India',
+      state: 'Bathinda, Punjab',
+      bestTime: 'Oct - Mar',
+      image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=1200&q=80',
       shortHistory: '',
       longDescription: '',
-      bestTime: 'October to March',
-      timings: '6:00 AM – 9:00 PM',
-      entryFee: 'Free Entry',
-      highlights: 'Historical Sanctum, Scenic Viewpoints',
-      nearestTransit: 'Nashik Road Railway Station',
+      highlights: 'Dating back to the 2nd Century CE, Imprisonment site of Empress Razia Sultan, Contains Gurdwara Sri',
       isTrending: false,
       isPublished: true,
+      hiddenHistory: '',
+      qrCode: `TOUR-${Math.floor(1000 + Math.random() * 9000)}`,
       timeline: [
-        { year: 'Foundational Era', title: 'Historic Commission', description: 'Established by regional rulers.' },
-        { year: 'Present Era', title: 'Tourism Heritage Site', description: 'Maintained for global travelers.' }
-      ]
+        { year: '90 CE', title: 'Kushana Era Construction', description: 'The fort is established by Raja Dab to guard the trade routes.', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+        { year: '1240 CE', title: 'Imprisonment of Razia Sultan', description: 'Razia Sultan, the first woman ruler of Delhi, is confined.', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80' },
+        { year: '1705 CE', title: 'Visit of Guru Gobind Singh Ji', description: 'The Tenth Sikh Guru visits the fort, leading to religious recognition.', image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80' }
+      ],
+      nearbyPlaces: [
+        { title: 'Bathinda Lake (Thermal)', distance: '3.5 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' },
+        { title: 'Mazaar of Baba Haji Rattan', distance: '2.8 km', category: 'Sacred Shrine / Fort', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+        { title: 'Rose Garden Bathinda', distance: '4.2 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80' },
+        { title: 'Bir Talab Forest & Zoo', distance: '8.5 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80' }
+      ],
+      coRelatedPlaces: [
+        { title: 'Qila Mubarak (Patiala)', circuit: 'Sikh Heritage Circuit', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+        { title: 'Kangra Fort', circuit: 'Ancient Himalayan Forts Circuit', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' }
+      ],
+      category: 'UNESCO Heritage',
+      era: 'Ancient Kushana Period',
+      timings: '6:00 AM – 8:00 PM',
+      entryFee: 'Free Entry',
+      nearestTransit: 'Bathinda Junction Railway Station'
     });
     setIsModalOpen(true);
   };
@@ -195,26 +221,200 @@ export default function AdminDashboard({
   const openEditModal = (place) => {
     setModalMode('edit');
     setSelectedId(place._id);
+
+    const placeCode = place.qrCode || `TOUR-${(place.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
+
+    const defaultTimeline = [
+      { year: '90 CE', title: 'Kushana Era Construction', description: 'The fort is established by Raja Dab to guard the trade route towards Multan.', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+      { year: '1240 CE', title: 'Imprisonment of Razia Sultan', description: 'Razia Sultan, the first woman ruler of Delhi, is confined within the fortress bastions.', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80' },
+      { year: '1705 CE', title: 'Visit of Guru Gobind Singh Ji', description: 'The Tenth Sikh Guru visits the fort, leading to the establishment of the holy Gurdwara.', image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80' }
+    ];
+
+    const defaultNearby = [
+      { title: 'Bathinda Lake (Thermal)', distance: '3.5 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' },
+      { title: 'Mazaar of Baba Haji Rattan', distance: '2.8 km', category: 'Sacred Shrine / Fort', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+      { title: 'Rose Garden Bathinda', distance: '4.2 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80' },
+      { title: 'Bir Talab Forest & Zoo', distance: '8.5 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80' }
+    ];
+
+    const defaultCoRelated = [
+      { title: 'Qila Mubarak (Patiala)', circuit: 'Sikh Heritage Circuit', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' },
+      { title: 'Kangra Fort', circuit: 'Ancient Himalayan Forts Circuit', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' }
+    ];
+
     setFormData({
       title: place.title || '',
+      badge: place.badge || (place.title?.toLowerCase().includes('qila') ? 'Oldest Surviving Fort in India' : 'Heritage Wonder of India'),
       state: place.state || '',
-      category: place.category || 'UNESCO Heritage',
-      era: place.era || '',
+      bestTime: place.keyPoints?.bestTime || 'Oct - Mar',
       image: place.image || '',
       shortHistory: place.shortHistory || '',
       longDescription: place.longDescription || '',
-      bestTime: place.keyPoints?.bestTime || '',
-      timings: place.keyPoints?.timings || '',
-      entryFee: place.keyPoints?.entryFee || '',
-      highlights: place.keyPoints?.highlights?.join(', ') || '',
-      nearestTransit: place.keyPoints?.nearestTransit || '',
+      highlights: place.keyPoints?.highlights?.join(', ') || (Array.isArray(place.highlights) ? place.highlights.join(', ') : 'Dating back to the 2nd Century CE, Imprisonment site of Empress Razia Sultan, Contains Gurdwara Sri'),
       isTrending: place.isTrending || false,
       isPublished: place.isPublished !== false,
-      timeline: place.timeline && place.timeline.length > 0 
-        ? place.timeline 
-        : [{ year: 'Historic Era', title: 'Heritage Inscription', description: 'Notable milestone.' }]
+      hiddenHistory: place.hiddenHistory || "According to local legend, the fort's bricks are so ancient that some bear distinct markings of Kushana-era craftsmanship. During the siege of 1240, Razia Sultan is said to have used a secret window in her high chamber to communicate with local loyalists, plotting her escape with Altunia by agreeing to marry her very captor to regain her lost throne in Delhi.",
+      qrCode: placeCode,
+      timeline: (place.timeline && place.timeline.length > 0) ? place.timeline : defaultTimeline,
+      nearbyPlaces: (place.nearbyPlaces && place.nearbyPlaces.length > 0) ? place.nearbyPlaces : defaultNearby,
+      coRelatedPlaces: (place.coRelatedPlaces && place.coRelatedPlaces.length > 0) ? place.coRelatedPlaces : defaultCoRelated,
+      category: place.category || 'UNESCO Heritage',
+      era: place.era || '',
+      timings: place.keyPoints?.timings || 'Sunrise to Sunset',
+      entryFee: place.keyPoints?.entryFee || 'Free Entry',
+      nearestTransit: place.keyPoints?.nearestTransit || ''
     });
     setIsModalOpen(true);
+  };
+
+  // QR Code Actions
+  const handleDownloadQR = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#111827';
+    // QR Markers
+    ctx.fillRect(20, 20, 70, 70);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(30, 30, 50, 50);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(40, 40, 30, 30);
+
+    ctx.fillRect(166, 20, 70, 70);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(176, 30, 50, 50);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(186, 40, 30, 30);
+
+    ctx.fillRect(20, 166, 70, 70);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(30, 176, 50, 50);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(40, 186, 30, 30);
+
+    for (let i = 0; i < 70; i++) {
+      const rx = 96 + (i % 7) * 9;
+      const ry = 96 + Math.floor(i / 7) * 9;
+      if ((i * 13) % 4 !== 0) {
+        ctx.fillRect(rx, ry, 7, 7);
+      }
+    }
+    const link = document.createElement('a');
+    link.download = `QR-${(formData.title || 'destination').replace(/\s+/g, '_')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const handleRegenerateQR = () => {
+    const slug = (formData.title || 'TOUR').toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 14);
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    setFormData(prev => ({
+      ...prev,
+      qrCode: `TOUR-${slug}-${rand}`
+    }));
+  };
+
+  // Sub-Modal Handlers for Interactive Modules
+  const openAddSubModal = (type) => {
+    if (type === 'timeline') {
+      setSubModal({
+        isOpen: true,
+        type: 'timeline',
+        mode: 'add',
+        index: null,
+        item: { year: '1200 CE', title: '', description: '', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' }
+      });
+    } else if (type === 'nearby') {
+      setSubModal({
+        isOpen: true,
+        type: 'nearby',
+        mode: 'add',
+        index: null,
+        item: { title: '', distance: '3.0 km', category: 'Scenic Viewpoint / Nature', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' }
+      });
+    } else if (type === 'coRelated') {
+      setSubModal({
+        isOpen: true,
+        type: 'coRelated',
+        mode: 'add',
+        index: null,
+        item: { title: '', circuit: 'Heritage Circuit', image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80' }
+      });
+    }
+  };
+
+  const openEditSubModal = (type, index) => {
+    if (type === 'timeline') {
+      setSubModal({
+        isOpen: true,
+        type: 'timeline',
+        mode: 'edit',
+        index,
+        item: { ...formData.timeline[index] }
+      });
+    } else if (type === 'nearby') {
+      setSubModal({
+        isOpen: true,
+        type: 'nearby',
+        mode: 'edit',
+        index,
+        item: { ...formData.nearbyPlaces[index] }
+      });
+    } else if (type === 'coRelated') {
+      setSubModal({
+        isOpen: true,
+        type: 'coRelated',
+        mode: 'edit',
+        index,
+        item: { ...formData.coRelatedPlaces[index] }
+      });
+    }
+  };
+
+  const handleDeleteSubItem = (type, index) => {
+    if (type === 'timeline') {
+      setFormData(prev => ({ ...prev, timeline: prev.timeline.filter((_, i) => i !== index) }));
+    } else if (type === 'nearby') {
+      setFormData(prev => ({ ...prev, nearbyPlaces: prev.nearbyPlaces.filter((_, i) => i !== index) }));
+    } else if (type === 'coRelated') {
+      setFormData(prev => ({ ...prev, coRelatedPlaces: prev.coRelatedPlaces.filter((_, i) => i !== index) }));
+    }
+  };
+
+  const handleSaveSubModal = (e) => {
+    e.preventDefault();
+    if (subModal.type === 'timeline') {
+      if (subModal.mode === 'add') {
+        setFormData(prev => ({ ...prev, timeline: [...prev.timeline, subModal.item] }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          timeline: prev.timeline.map((t, idx) => idx === subModal.index ? subModal.item : t)
+        }));
+      }
+    } else if (subModal.type === 'nearby') {
+      if (subModal.mode === 'add') {
+        setFormData(prev => ({ ...prev, nearbyPlaces: [...prev.nearbyPlaces, subModal.item] }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          nearbyPlaces: prev.nearbyPlaces.map((p, idx) => idx === subModal.index ? subModal.item : p)
+        }));
+      }
+    } else if (subModal.type === 'coRelated') {
+      if (subModal.mode === 'add') {
+        setFormData(prev => ({ ...prev, coRelatedPlaces: [...prev.coRelatedPlaces, subModal.item] }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          coRelatedPlaces: prev.coRelatedPlaces.map((c, idx) => idx === subModal.index ? subModal.item : c)
+        }));
+      }
+    }
+    setSubModal({ isOpen: false, type: null, mode: 'add', index: null, item: {} });
   };
 
   // Option 1: Set on Trending Toggle
@@ -256,23 +456,30 @@ export default function AdminDashboard({
     e.preventDefault();
     const payload = {
       title: formData.title,
+      badge: formData.badge,
       state: formData.state,
       category: formData.category,
       era: formData.era,
       image: formData.image,
       shortHistory: formData.shortHistory,
       longDescription: formData.longDescription,
+      hiddenHistory: formData.hiddenHistory,
+      qrCode: formData.qrCode,
       isTrending: formData.isTrending,
       isPublished: formData.isPublished,
       keyPoints: {
         bestTime: formData.bestTime,
         timings: formData.timings,
         entryFee: formData.entryFee,
-        highlights: formData.highlights.split(',').map(h => h.trim()).filter(Boolean),
+        highlights: typeof formData.highlights === 'string'
+          ? formData.highlights.split(',').map(h => h.trim()).filter(Boolean)
+          : (Array.isArray(formData.highlights) ? formData.highlights : []),
         nearestTransit: formData.nearestTransit,
         architecturalStyle: 'Indian Classical / Regional Heritage'
       },
-      timeline: formData.timeline.filter(t => t.year && t.title)
+      timeline: formData.timeline,
+      nearbyPlaces: formData.nearbyPlaces,
+      coRelatedPlaces: formData.coRelatedPlaces
     };
 
     try {
@@ -1169,190 +1376,665 @@ export default function AdminDashboard({
       {/* MODAL: ADD / EDIT DESTINATION (Direct MongoDB Atlas Synchronization) */}
       {/* ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-gray-200 my-8 space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-gray-200 my-4 flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95">
             
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold">
-                  {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                </div>
-                <h3 className="font-bold text-base text-gray-900">
-                  {modalMode === 'add' ? 'Add New Tourism Site' : 'Edit Destination Details'}
+            {/* Modal Header */}
+            <div className="flex items-start justify-between p-5 sm:p-6 pb-3 border-b border-gray-100 shrink-0 bg-white">
+              <div>
+                <h3 className="font-bold text-lg sm:text-xl text-gray-900 tracking-tight">
+                  {modalMode === 'add' ? 'Add Destination in MongoDB' : 'Edit Destination in MongoDB'}
                 </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Data saved here will be stored permanently in MongoDB Atlas.
+                </p>
               </div>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-700 p-1"
+                className="text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-3.5 text-xs">
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Monument Title *</label>
-                  <input 
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. Muktidham Temple"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Location / State *</label>
-                  <input 
-                    type="text"
-                    required
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. Nashik, Maharashtra"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Category</label>
-                  <select 
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white"
-                  >
-                    <option>Spiritual & Temples</option>
-                    <option>Ancient Caves</option>
-                    <option>Natural & Scenic</option>
-                    <option>Trekking & Forts</option>
-                    <option>UNESCO Heritage</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Era / Construction Period</label>
-                  <input 
-                    type="text"
-                    value={formData.era}
-                    onChange={(e) => setFormData({ ...formData, era: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. 18th Century CE"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">Image URL *</label>
-                <input 
-                  type="url"
-                  required
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                  placeholder="https://images.unsplash.com/..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1">Short Overview History</label>
-                <textarea 
-                  rows={2}
-                  value={formData.shortHistory}
-                  onChange={(e) => setFormData({ ...formData, shortHistory: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                  placeholder="Summary of historic importance..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Best Visiting Time</label>
-                  <input 
-                    type="text"
-                    value={formData.bestTime}
-                    onChange={(e) => setFormData({ ...formData, bestTime: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. Oct to Mar"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Visiting Hours</label>
-                  <input 
-                    type="text"
-                    value={formData.timings}
-                    onChange={(e) => setFormData({ ...formData, timings: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. 6 AM – 8 PM"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Entry Fee</label>
-                  <input 
-                    type="text"
-                    value={formData.entryFee}
-                    onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    placeholder="e.g. Free Entry"
-                  />
-                </div>
-              </div>
-
-              {/* Site Visibility & Trending Controls */}
-              <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-2">
-                <div className="font-extrabold text-[11px] text-amber-900 uppercase tracking-wider">
-                  Site Visibility & Marketing Flags
-                </div>
-                <div className="flex flex-wrap items-center gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto px-5 sm:px-7 py-5 space-y-4">
+                
+                {/* Row 1: Place Name & Badge / Tagline */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Place Name</label>
                     <input 
-                      type="checkbox"
-                      checked={formData.isTrending}
-                      onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
-                      className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer"
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                      placeholder="e.g. Qila Mubarak"
                     />
-                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-                      <span>Set on Trending</span>
-                    </span>
-                  </label>
+                  </div>
 
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge / Tagline</label>
                     <input 
-                      type="checkbox"
-                      checked={formData.isPublished}
-                      onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                      className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      type="text"
+                      value={formData.badge}
+                      onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                      placeholder="e.g. Oldest Surviving Fort in India"
                     />
-                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Published on Web</span>
-                    </span>
-                  </label>
+                  </div>
                 </div>
+
+                {/* Row 2: Location & Best Time to Visit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Location</label>
+                    <input 
+                      type="text"
+                      required
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                      placeholder="e.g. Bathinda, Punjab"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Best Time to Visit</label>
+                    <input 
+                      type="text"
+                      value={formData.bestTime}
+                      onChange={(e) => setFormData({ ...formData, bestTime: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                      placeholder="e.g. Oct - Mar"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Image URL */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Image URL</label>
+                  <input 
+                    type="url"
+                    required
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                    placeholder="https://assets.architecturaldigest.in/photos/..."
+                  />
+                </div>
+
+                {/* Row 4: Short Overview (Summary) */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Short Overview (Summary)</label>
+                  <textarea 
+                    rows={3}
+                    value={formData.shortHistory}
+                    onChange={(e) => setFormData({ ...formData, shortHistory: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                    placeholder="A magnificent 2nd-century brick fortress in Bathinda, Punjab, celebrated as the oldest surviving fort in India..."
+                  />
+                </div>
+
+                {/* Row 5: Detailed Description */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-amber-600">
+                      Detailed Description (Full In-Depth 50-Line Heritage Narrative)
+                    </label>
+                    <span className="text-[11px] text-gray-400 font-medium">
+                      Stored in Database
+                    </span>
+                  </div>
+                  <textarea 
+                    rows={7}
+                    value={formData.longDescription}
+                    onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 leading-relaxed font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                    placeholder={`1. GEOGRAPHICAL SETTING & TERRAIN: Located in the heart of Bathinda city in the Malwa region of southwestern Punjab...\n\n2. ANCIENT ORIGIN & FOUNDATION: The fort's foundations trace back to the Kushana Empire in the 1st-2nd Century CE...`}
+                  />
+                </div>
+
+                {/* Row 6: Key Highlights */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Key Highlights (Comma Separated)</label>
+                  <input 
+                    type="text"
+                    value={formData.highlights}
+                    onChange={(e) => setFormData({ ...formData, highlights: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                    placeholder="Dating back to the 2nd Century CE, Imprisonment site of Empress Razia Sultan, Contains Gurdwara Sri"
+                  />
+                </div>
+
+                {/* Row 7: Top Trending Callout Box */}
+                <div className="p-4 rounded-2xl border border-amber-200/90 bg-[#fffdfa] flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-bold text-xs sm:text-sm text-gray-900 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500 fill-amber-400" />
+                      <span>Show in "Top Trending Destinations"</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                      When checked, this destination appears in the Top Trending Destinations section on the home page. Unchecked destinations are hidden from trending.
+                    </p>
+                  </div>
+                  <input 
+                    type="checkbox"
+                    checked={formData.isTrending}
+                    onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
+                    className="w-5 h-5 rounded text-orange-600 focus:ring-orange-500 border-gray-300 cursor-pointer shrink-0"
+                  />
+                </div>
+
+                {/* SECTION: ADVANCED SITE FEATURES & MEDIA CONFIGURATION */}
+                <div className="pt-6 border-t border-gray-100 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-extrabold text-xs sm:text-sm tracking-wider text-gray-900 uppercase">
+                      ADVANCED SITE FEATURES & MEDIA CONFIGURATION
+                    </h4>
+                    <span className="px-3 py-1 rounded-full bg-amber-100/80 border border-amber-200/60 text-amber-800 text-[11px] font-bold">
+                      Interactive Modules
+                    </span>
+                  </div>
+
+                  {/* QR Code Module */}
+                  <div className="rounded-2xl border border-gray-200/80 bg-[#f8fafc] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-14 h-14 bg-white border border-gray-200 rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+                        <QrCode className="w-10 h-10 text-gray-800" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-800">
+                          Visitors scan this from their dashboard to jump straight to this site.
+                        </p>
+                        <span className="text-[10px] text-gray-400 font-mono font-bold tracking-wider uppercase block mt-0.5">
+                          {formData.qrCode || `TOUR-${(formData.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button 
+                        type="button"
+                        onClick={handleDownloadQR}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download QR</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={handleRegenerateQR}
+                        className="px-3 py-1.5 rounded-xl bg-gray-200/80 hover:bg-gray-300 text-gray-700 font-bold text-xs transition cursor-pointer"
+                      >
+                        Regenerate
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Field: Unique / hidden history */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                      Unique / hidden history
+                    </label>
+                    <textarea 
+                      rows={3}
+                      value={formData.hiddenHistory}
+                      onChange={(e) => setFormData({ ...formData, hiddenHistory: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 bg-white shadow-xs"
+                      placeholder="According to local legend, the fort's bricks are so ancient that some bear distinct markings of Kushana-era craftsmanship..."
+                    />
+                  </div>
+
+                  {/* Status Checkboxes Row */}
+                  <div className="flex flex-wrap items-center gap-6 py-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input 
+                        type="checkbox"
+                        checked={formData.isPublished}
+                        onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                        <span>Published</span>
+                        <span className="font-normal text-gray-500">(Accessible to users in Search Bar)</span>
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input 
+                        type="checkbox"
+                        checked={formData.isTrending}
+                        onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })}
+                        className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-gray-300 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                        <span>Top Trending</span>
+                        <span className="font-normal text-gray-500">(Featured on Homepage)</span>
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* MODULE 1: Visual Timeline (year-by-year slider) */}
+                  <div className="rounded-2xl border border-gray-200/80 bg-[#fafafa]/60 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-xs sm:text-sm text-gray-900">
+                            Visual Timeline (year-by-year slider)
+                          </h5>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                            {formData.timeline?.length || 0} milestones
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                          Give each photo a year — visitors get a drag-to-slide timeline that jumps to the closest photo as they move the pointer. Photos are kept sorted by year automatically in MongoDB.
+                        </p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => openAddSubModal('timeline')}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shrink-0 self-start sm:self-center shadow-xs transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Timeline Era</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {formData.timeline && formData.timeline.length > 0 ? (
+                        formData.timeline.map((era, idx) => (
+                          <div key={idx} className="bg-white rounded-2xl border border-gray-200 p-3 shadow-xs flex items-start gap-3 hover:border-gray-300 transition">
+                            <img 
+                              src={era.image || 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=300&q=80'} 
+                              alt={era.title}
+                              className="w-14 h-14 rounded-xl object-cover border border-gray-100 shrink-0 bg-gray-100"
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=300&q=80'; }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="px-2 py-0.5 rounded-md bg-[#ff8c00] text-black font-black text-[10px] shrink-0">
+                                    {era.year}
+                                  </span>
+                                  <span className="font-bold text-xs text-gray-900 truncate">
+                                    {era.title}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button 
+                                    type="button"
+                                    onClick={() => openEditSubModal('timeline', idx)}
+                                    className="p-1 text-gray-400 hover:text-amber-600 transition"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleDeleteSubItem('timeline', idx)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-snug">
+                                {era.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-4 text-xs text-gray-400 italic">
+                          No timeline milestones added yet. Click "+ Add Timeline Era" above.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* MODULE 2: Nearby Places To Visit */}
+                  <div className="rounded-2xl border border-gray-200/80 bg-[#fafafa]/60 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-xs sm:text-sm text-gray-900">
+                            Nearby Places To Visit
+                          </h5>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                            {formData.nearbyPlaces?.length || 0} places
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                          Recommended stops within 15km stored in database
+                        </p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => openAddSubModal('nearby')}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shrink-0 self-start sm:self-center shadow-xs transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Nearby Place</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {formData.nearbyPlaces && formData.nearbyPlaces.length > 0 ? (
+                        formData.nearbyPlaces.map((place, idx) => (
+                          <div key={idx} className="bg-white rounded-2xl border border-gray-200 p-3 shadow-xs flex items-start gap-3 hover:border-gray-300 transition">
+                            <img 
+                              src={place.image || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80'} 
+                              alt={place.title}
+                              className="w-12 h-12 rounded-xl object-cover border border-gray-100 shrink-0 bg-gray-100"
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80'; }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-xs text-gray-900 truncate">
+                                  {place.title}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button 
+                                    type="button"
+                                    onClick={() => openEditSubModal('nearby', idx)}
+                                    className="p-1 text-gray-400 hover:text-amber-600 transition"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleDeleteSubItem('nearby', idx)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] font-medium text-amber-600 truncate mt-0.5">
+                                {place.distance} • {place.category}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-4 text-xs text-gray-400 italic">
+                          No nearby places added yet. Click "+ Add Nearby Place" above.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* MODULE 3: Co-Related Places */}
+                  <div className="rounded-2xl border border-gray-200/80 bg-[#fafafa]/60 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-xs sm:text-sm text-gray-900">
+                            Co-Related Places
+                          </h5>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                            {formData.coRelatedPlaces?.length || 0} links
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                          Monuments sharing historical heritage circuits stored in database
+                        </p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => openAddSubModal('coRelated')}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shrink-0 self-start sm:self-center shadow-xs transition cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Link Related Place</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {formData.coRelatedPlaces && formData.coRelatedPlaces.length > 0 ? (
+                        formData.coRelatedPlaces.map((link, idx) => (
+                          <div key={idx} className="bg-white rounded-2xl border border-gray-200 p-3 shadow-xs flex items-start gap-3 hover:border-gray-300 transition">
+                            <img 
+                              src={link.image || 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=300&q=80'} 
+                              alt={link.title}
+                              className="w-12 h-12 rounded-xl object-cover border border-gray-100 shrink-0 bg-gray-100"
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=300&q=80'; }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-xs text-gray-900 truncate">
+                                  {link.title}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button 
+                                    type="button"
+                                    onClick={() => openEditSubModal('coRelated', idx)}
+                                    className="p-1 text-gray-400 hover:text-amber-600 transition"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => handleDeleteSubItem('coRelated', idx)}
+                                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-[11px] font-medium text-amber-600 truncate mt-0.5">
+                                {link.circuit}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-4 text-xs text-gray-400 italic">
+                          No co-related links added yet. Click "+ Link Related Place" above.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 bg-white border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold shadow-md transition cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer"
                 >
-                  {modalMode === 'add' ? 'Publish to Atlas' : 'Save Changes'}
+                  SAVE CHANGES
                 </button>
               </div>
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-MODAL: ADD / EDIT TIMELINE, NEARBY PLACE, OR CO-RELATED LINK */}
+      {/* ========================================================================= */}
+      {subModal.isOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-gray-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h4 className="font-bold text-sm text-gray-900">
+                {subModal.mode === 'add' ? 'Add' : 'Edit'}{' '}
+                {subModal.type === 'timeline' ? 'Timeline Era' : subModal.type === 'nearby' ? 'Nearby Place' : 'Co-Related Place'}
+              </h4>
+              <button 
+                type="button" 
+                onClick={() => setSubModal({ isOpen: false, type: null, mode: 'add', index: null, item: {} })}
+                className="text-gray-400 hover:text-gray-700 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSubModal} className="space-y-3 text-xs">
+              {subModal.type === 'timeline' && (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Year / Era Pill *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.year || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, year: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. 90 CE, 1240 CE, 1705 CE"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Era Title *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.title || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, title: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. Kushana Era Construction"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Description *</label>
+                    <textarea 
+                      rows={2}
+                      required
+                      value={subModal.item.description || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, description: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="The fort is established by Raja Dab..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Image URL</label>
+                    <input 
+                      type="url"
+                      value={subModal.item.image || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, image: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                  </div>
+                </>
+              )}
+
+              {subModal.type === 'nearby' && (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Place Name *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.title || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, title: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. Bathinda Lake (Thermal)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Distance *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.distance || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, distance: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. 3.5 km"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Category / Tag *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.category || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, category: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. Scenic Viewpoint / Nature"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Image URL</label>
+                    <input 
+                      type="url"
+                      value={subModal.item.image || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, image: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                  </div>
+                </>
+              )}
+
+              {subModal.type === 'coRelated' && (
+                <>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Related Monument Title *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.title || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, title: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. Qila Mubarak (Patiala)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Heritage Circuit *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={subModal.item.circuit || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, circuit: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="e.g. Sikh Heritage Circuit"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">Image URL</label>
+                    <input 
+                      type="url"
+                      value={subModal.item.image || ''}
+                      onChange={(e) => setSubModal({ ...subModal, item: { ...subModal.item, image: e.target.value } })}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="https://images.unsplash.com/..."
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setSubModal({ isOpen: false, type: null, mode: 'add', index: null, item: {} })}
+                  className="px-3.5 py-1.5 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold shadow-sm transition cursor-pointer"
+                >
+                  Save Item
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

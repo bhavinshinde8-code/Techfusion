@@ -48,6 +48,29 @@ const DestinationSchema = new mongoose.Schema({
     architecturalStyle: { type: String, default: 'Indian Classical / Regional' }
   },
   timeline: [TimelineItemSchema],
+  badge: {
+    type: String,
+    default: ''
+  },
+  hiddenHistory: {
+    type: String,
+    default: ''
+  },
+  qrCode: {
+    type: String,
+    default: ''
+  },
+  nearbyPlaces: [{
+    title: { type: String },
+    distance: { type: String },
+    category: { type: String },
+    image: { type: String }
+  }],
+  coRelatedPlaces: [{
+    title: { type: String },
+    circuit: { type: String },
+    image: { type: String }
+  }],
   isTrending: {
     type: Boolean,
     default: false
@@ -60,7 +83,7 @@ const DestinationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-});
+}, { strict: false });
 
 // Text index for search
 DestinationSchema.index({ title: 'text', state: 'text', shortHistory: 'text', era: 'text' });
