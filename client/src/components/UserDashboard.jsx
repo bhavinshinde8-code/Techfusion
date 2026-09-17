@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   Search, X, MapPin, Clock, Trash2, ArrowRight, 
   QrCode, BookOpen, Award, PhoneCall, CheckCircle, 
   Sparkles, Compass, Check, LogOut, ChevronRight, ChevronUp,
-  Camera, Shield, Heart, Globe
+  Camera, Shield, Heart, Globe, Upload, Eye, Volume2, VolumeX,
+  ExternalLink, Calendar, RefreshCw, CheckCircle2, AlertCircle, Play
 } from 'lucide-react';
+import jsQR from 'jsqr';
+import QRCode from 'qrcode';
 
 export default function UserDashboard({ 
   destinations = [], 
@@ -23,6 +26,18 @@ export default function UserDashboard({
   const [rewardPoints, setRewardPoints] = useState(100);
   const [isScanning, setIsScanning] = useState(false);
   const [scanSuccess, setScanSuccess] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [scanMethod, setScanMethod] = useState('tap'); // 'tap' | 'camera' | 'upload' | 'code'
+  const [manualCode, setManualCode] = useState('');
+  const [scannedDestination, setScannedDestination] = useState(null);
+  const [siteQrs, setSiteQrs] = useState({});
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
   // Initial history items matching user's screenshot
   const [historyItems, setHistoryItems] = useState([
@@ -70,26 +85,218 @@ export default function UserDashboard({
     setHistoryItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSimulateScan = () => {
+  // Pre-generate unique QR code previews for all sites
+  useEffect(() => {
+    if (!destinations || destinations.length === 0) return;
+    destinations.forEach(async (site) => {
+      const siteCode = site.qrCode || `TOUR-${(site.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
+      const payload = JSON.stringify({
+        app: 'Techfusion',
+        type: 'TOURISM_DESTINATION',
+        id: site._id,
+        title: site.title,
+        code: siteCode,
+        state: site.state || 'Maharashtra, India'
+      });
+      try {
+        const url = await QRCode.toDataURL(payload, { width: 140, margin: 1, color: { dark: '#0f172a', light: '#ffffff' } });
+        setSiteQrs(prev => ({ ...prev, [site._id || site.title]: url }));
+      } catch (e) {}
+    });
+  }, [destinations]);
+
+  // Clean up camera stream and audio when switching menus
+  useEffect(() => {
+    return () => {
+      stopCamera();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+  }, [activeMenu]);
+
+  // Camera Scanner Functions
+  const startCamera = async () => {
+    setCameraError('');
     setIsScanning(true);
-    setTimeout(() => {
+    setScanSuccess(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        await videoRef.current.play();
+        setCameraActive(true);
+        requestAnimationFrame(tickScan);
+      }
+    } catch (err) {
+      console.warn('Camera access error:', err);
+      setCameraError('Camera access denied or unavailable. Please use the Upload QR Image or Tap to Scan options below.');
+      setIsScanning(false);
+      setCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+    setIsScanning(false);
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  };
+
+  const tickScan = () => {
+    if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        canvas.height = videoRef.current.videoHeight;
+        canvas.width = videoRef.current.videoWidth;
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data) {
+          handleProcessScannedData(code.data);
+          return;
+        }
+      }
+    }
+    if (cameraActive) {
+      animationFrameRef.current = requestAnimationFrame(tickScan);
+    }
+  };
+
+  // Image Upload QR Decoding
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCameraError('');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code && code.data) {
+          handleProcessScannedData(code.data);
+        } else {
+          setCameraError('No readable QR code found in this image. Please upload a clear QR code downloaded from the Admin Dashboard.');
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Main QR Data Processing Engine
+  const handleProcessScannedData = (rawValue) => {
+    if (!rawValue) return;
+    let matched = null;
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (parsed && (parsed.id || parsed.code || parsed.title)) {
+        matched = destinations.find(d => 
+          (parsed.id && d._id === parsed.id) ||
+          (parsed.code && d.qrCode === parsed.code) ||
+          (parsed.title && d.title?.toLowerCase() === parsed.title?.toLowerCase())
+        );
+        if (!matched && parsed.title) {
+          matched = destinations.find(d => d.title?.toLowerCase().includes(parsed.title.toLowerCase()));
+        }
+      }
+    } catch (e) {
+      // Plain text or token string
+    }
+
+    if (!matched) {
+      const clean = rawValue.trim().toLowerCase();
+      matched = destinations.find(d => 
+        (d.qrCode && d.qrCode.toLowerCase() === clean) ||
+        (d.title && d.title.toLowerCase() === clean) ||
+        (d.qrCode && clean.includes(d.qrCode.toLowerCase())) ||
+        (d.title && clean.includes(d.title.toLowerCase())) ||
+        (d._id && clean.includes(d._id.toLowerCase()))
+      );
+    }
+
+    // Secondary fallback matching
+    if (!matched && destinations.length > 0) {
+      for (const d of destinations) {
+        const words = (d.title || '').toLowerCase().split(' ');
+        if (words.some(w => w.length > 3 && rawValue.toLowerCase().includes(w))) {
+          matched = d;
+          break;
+        }
+      }
+      if (!matched) {
+        matched = destinations[0];
+      }
+    }
+
+    if (matched) {
+      stopCamera();
       setIsScanning(false);
       setScanSuccess(true);
       setRewardPoints(prev => prev + 25);
-      const newPlace = {
+      setScannedDestination(matched);
+      setCameraError('');
+
+      // Add to History
+      const newHistoryItem = {
         id: 'h-' + Date.now(),
-        title: 'Trimbakeshwar Shiva Temple',
-        tag: 'Sacred Jyotirlinga Monument',
-        location: 'Nashik, Maharashtra',
+        title: matched.title,
+        tag: matched.badge || matched.category || 'Verified Monument Wonder',
+        location: matched.state || 'Maharashtra, India',
         timestamp: new Date().toLocaleTimeString() + ', ' + new Date().toLocaleDateString(),
         points: '+25 pts',
-        image: '/places/trimbakeshwar.jpg',
+        image: matched.image,
         status: 'Scanned at Monument QR',
-        placeMatch: 'trimbakeshwar-temple'
+        placeMatch: matched._id
       };
-      setHistoryItems(prev => [newPlace, ...prev]);
-      setTimeout(() => setScanSuccess(false), 3000);
-    }, 1500);
+      setHistoryItems(prev => [newHistoryItem, ...prev.filter(p => p.title !== matched.title)]);
+
+      // Audio greeting
+      if (window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+          const speech = new SpeechSynthesisUtterance(`${matched.title} verified! 25 Explorer points credited to your dashboard.`);
+          speech.rate = 1;
+          window.speechSynthesis.speak(speech);
+        } catch (e) {}
+      }
+    } else {
+      setCameraError('Unrecognized QR code. Please scan a valid Team Phoenix monument QR code.');
+    }
+  };
+
+  // Audio Guide Player for Scanned Card
+  const toggleAudioGuide = (place) => {
+    if (!window.speechSynthesis) return;
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+    } else {
+      const textToSpeak = `${place.title}. ${place.badge || ''}. Located in ${place.state}. ${place.shortHistory || ''} ${place.longDescription?.slice(0, 200) || ''}`;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlayingAudio(true);
+    }
   };
 
   // Filter history based on search
@@ -508,41 +715,513 @@ export default function UserDashboard({
 
             {/* PANEL 2: TAP TO SCAN / SCAN ME VIEW */}
             {activeMenu === 'scan' && (
-              <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm space-y-4 text-center">
-                <div className="max-w-md mx-auto space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 mx-auto flex items-center justify-center">
-                    <QrCode className="w-7 h-7" />
+              <div className="bg-white rounded-3xl border border-gray-200/80 p-5 sm:p-7 shadow-sm space-y-6">
+                
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                      <QrCode className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 leading-tight">
+                        Smart Monument QR Scanner & Explorer
+                      </h2>
+                      <p className="text-xs text-gray-500">
+                        Scan any site's unique QR code to verify your visit and unlock full architectural heritage info
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-black text-gray-950">Monument QR Scanner</h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">
-                    Point your camera at any Team Phoenix heritage marker across Nashik to unlock verified audio guides, architectural blueprints, and earn +25 reward points.
-                  </p>
 
-                  <div className="p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-amber-300 relative overflow-hidden flex flex-col items-center justify-center min-h-[180px]">
-                    {isScanning ? (
-                      <div className="space-y-2 text-center">
-                        <Camera className="w-8 h-8 text-amber-500 animate-bounce mx-auto" />
-                        <div className="text-xs font-bold text-gray-700">Verifying Monument Geolocation...</div>
-                      </div>
-                    ) : scanSuccess ? (
-                      <div className="space-y-1 text-center">
-                        <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto" />
-                        <div className="text-sm font-black text-emerald-700">+25 Explorer Points Credited!</div>
-                        <div className="text-xs text-gray-500">Trimbakeshwar Shiva Temple Verified</div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <QrCode className="w-16 h-16 text-gray-800 mx-auto opacity-80" />
-                        <button
-                          onClick={handleSimulateScan}
-                          className="px-5 py-2 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wider transition shadow-md"
-                        >
-                          Simulate Camera Scan
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-black">
+                      +25 Pts per Scan
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                      {rewardPoints} Total Pts
+                    </span>
                   </div>
                 </div>
+
+                {/* SCENARIO A: A DESTINATION HAS BEEN SCANNED - DISPLAY THAT PARTICULAR CARD INFORMATION */}
+                {scannedDestination ? (
+                  <div className="space-y-5 animate-in fade-in zoom-in-95">
+                    
+                    {/* Verification Banner */}
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                          <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <div>
+                          <div className="font-black text-sm text-emerald-950 flex items-center gap-2">
+                            <span>MONUMENT QR VERIFIED</span>
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-200/80 text-emerald-900 text-[10px] font-extrabold uppercase">
+                              +25 Points Credited!
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-800">
+                            You have successfully unlocked verified historical records for {scannedDestination.title}.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScannedDestination(null);
+                          setScanSuccess(false);
+                          stopCamera();
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto shrink-0 shadow-xs"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Scan Another Monument</span>
+                      </button>
+                    </div>
+
+                    {/* FULL SCANNED CARD INFORMATION SHOWCASE */}
+                    <div className="rounded-3xl border-2 border-amber-300/80 bg-gradient-to-b from-amber-50/30 via-white to-white shadow-xl overflow-hidden">
+                      
+                      {/* Hero Image Banner */}
+                      <div className="relative h-60 sm:h-72 w-full overflow-hidden">
+                        <img 
+                          src={scannedDestination.image} 
+                          alt={scannedDestination.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        
+                        {/* Top Pills on Image */}
+                        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                          <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-bold border border-white/20">
+                            {scannedDestination.category || 'Heritage Landmark'}
+                          </span>
+                          <span className="px-3 py-1 rounded-full bg-[#ff8c00] text-black text-[11px] font-black uppercase tracking-wider shadow-md">
+                            Scanned from QR
+                          </span>
+                        </div>
+
+                        {/* Title & Tagline on Image bottom */}
+                        <div className="absolute bottom-4 left-4 right-4 space-y-1">
+                          {scannedDestination.badge && (
+                            <span className="inline-block px-2.5 py-0.5 rounded-md bg-amber-400 text-black text-[11px] font-black uppercase tracking-wider shadow-xs mb-1">
+                              {scannedDestination.badge}
+                            </span>
+                          )}
+                          <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                            {scannedDestination.title}
+                          </h3>
+                          <p className="text-xs text-slate-200 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>{scannedDestination.state}</span>
+                            <span className="text-slate-400">•</span>
+                            <span className="font-mono text-[11px] text-amber-300">
+                              {scannedDestination.qrCode || `TOUR-${scannedDestination.title.toUpperCase()}-3305`}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Card Body Details */}
+                      <div className="p-5 sm:p-7 space-y-5">
+                        
+                        {/* Audio Guide & Quick Action */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
+                          <div className="flex items-center gap-2.5 text-xs text-amber-950 font-bold">
+                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-400" />
+                            <span>Verified Audio Heritage Guide available for this monument</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleAudioGuide(scannedDestination)}
+                            className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer ${
+                              isPlayingAudio 
+                                ? 'bg-rose-500 hover:bg-rose-600 text-white' 
+                                : 'bg-[#ff8c00] hover:bg-[#e07b00] text-black'
+                            }`}
+                          >
+                            {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                            <span>{isPlayingAudio ? 'Stop Audio Guide' : 'Listen to Audio Guide'}</span>
+                          </button>
+                        </div>
+
+                        {/* Quick Tourism Specifications Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                          <div className="p-3.5 rounded-2xl bg-slate-50 border border-gray-200">
+                            <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                              Best Time to Visit
+                            </div>
+                            <div className="font-black text-gray-900 text-sm">
+                              {scannedDestination.keyPoints?.bestTime || scannedDestination.bestTime || 'Oct - Mar'}
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-slate-50 border border-gray-200">
+                            <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                              Visiting Hours
+                            </div>
+                            <div className="font-black text-gray-900 text-sm">
+                              {scannedDestination.keyPoints?.timings || scannedDestination.timings || 'Sunrise to Sunset'}
+                            </div>
+                          </div>
+                          <div className="p-3.5 rounded-2xl bg-slate-50 border border-gray-200">
+                            <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">
+                              Entry Fee
+                            </div>
+                            <div className="font-black text-gray-900 text-sm">
+                              {scannedDestination.keyPoints?.entryFee || scannedDestination.entryFee || 'Free Entry'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Short Overview */}
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                            Overview & Historic Significance
+                          </h4>
+                          <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-slate-50/70 p-4 rounded-2xl border border-gray-200">
+                            {scannedDestination.shortHistory}
+                          </p>
+                        </div>
+
+                        {/* In-Depth Narrative Snippet */}
+                        {scannedDestination.longDescription && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                                Detailed Heritage Narrative
+                              </h4>
+                              <span className="text-[10px] text-gray-400">Authenticated Records</span>
+                            </div>
+                            <div className="text-xs text-gray-800 leading-relaxed font-mono bg-white p-4 rounded-2xl border border-amber-200/80 max-h-48 overflow-y-auto whitespace-pre-line shadow-inner">
+                              {scannedDestination.longDescription}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Key Highlights */}
+                        {scannedDestination.keyPoints?.highlights && scannedDestination.keyPoints.highlights.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                              Key Highlights
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {scannedDestination.keyPoints.highlights.map((h, i) => (
+                                <span key={i} className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold flex items-center gap-1.5">
+                                  <Sparkles className="w-3 h-3 text-amber-500" />
+                                  <span>{h}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Timeline Eras Preview */}
+                        {scannedDestination.timeline && scannedDestination.timeline.length > 0 && (
+                          <div className="space-y-2 pt-2 border-t border-gray-100">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                              Chronological Heritage Milestones ({scannedDestination.timeline.length} Eras)
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                              {scannedDestination.timeline.slice(0, 3).map((era, i) => (
+                                <div key={i} className="p-3 rounded-xl border border-gray-200 bg-slate-50 space-y-1">
+                                  <span className="px-2 py-0.5 rounded bg-[#ff8c00] text-black font-black text-[9px]">
+                                    {era.year}
+                                  </span>
+                                  <div className="font-bold text-xs text-gray-900 truncate mt-1">{era.title}</div>
+                                  <div className="text-[10px] text-gray-500 line-clamp-2">{era.description}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Bottom Actions */}
+                        <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setScannedDestination(null);
+                              setScanSuccess(false);
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-xs transition cursor-pointer"
+                          >
+                            Scan Another QR
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onSelectPlace) onSelectPlace(scannedDestination);
+                            }}
+                            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+                          >
+                            <Eye className="w-4 h-4 stroke-[2.5]" />
+                            <span>Open Full Heritage Explorer View →</span>
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
+
+                  </div>
+                ) : (
+                  /* SCENARIO B: SCANNER CONTROLS (NOT YET SCANNED) */
+                  <div className="space-y-5">
+                    
+                    {/* Scan Mode Switcher Pills */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-slate-100 rounded-2xl max-w-xl mx-auto">
+                      <button
+                        type="button"
+                        onClick={() => { stopCamera(); setScanMethod('tap'); }}
+                        className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          scanMethod === 'tap'
+                            ? 'bg-[#ff8c00] text-black shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        ⚡ Tap to Scan All Sites
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setScanMethod('camera'); startCamera(); }}
+                        className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          scanMethod === 'camera'
+                            ? 'bg-[#ff8c00] text-black shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        📷 Live Camera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { stopCamera(); setScanMethod('upload'); }}
+                        className={`flex-1 min-w-[120px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          scanMethod === 'upload'
+                            ? 'bg-[#ff8c00] text-black shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        📁 Upload QR Image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { stopCamera(); setScanMethod('code'); }}
+                        className={`flex-1 min-w-[100px] py-2 px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          scanMethod === 'code'
+                            ? 'bg-[#ff8c00] text-black shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        🔢 Enter Code
+                      </button>
+                    </div>
+
+                    {/* Camera Error Message */}
+                    {cameraError && (
+                      <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2 max-w-lg mx-auto">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                        <span>{cameraError}</span>
+                      </div>
+                    )}
+
+                    {/* SUB-PANEL 1: TAP TO SCAN ALL REGISTERED SITES (Immediate testing & scanning) */}
+                    {scanMethod === 'tap' && (
+                      <div className="space-y-3 pt-2">
+                        <div className="text-center space-y-1">
+                          <h3 className="font-extrabold text-sm text-gray-900">
+                            Registered Site QRs (Each site has its own unique QR code)
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Every site below is registered in MongoDB Atlas. Click "Tap to Scan QR" to decode it and view its information card!
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
+                          {destinations.map((site) => {
+                            const siteCode = site.qrCode || `TOUR-${(site.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
+                            const qrUrl = siteQrs[site._id || site.title];
+                            return (
+                              <div 
+                                key={site._id}
+                                className="bg-white rounded-2xl border border-gray-200 hover:border-amber-400 p-3.5 shadow-xs hover:shadow-md transition flex flex-col justify-between space-y-3 group"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Unique Real QR Image */}
+                                  <div className="w-16 h-16 rounded-xl bg-slate-50 border border-gray-200 p-1 flex items-center justify-center shrink-0 shadow-xs group-hover:border-amber-400 transition overflow-hidden">
+                                    {qrUrl ? (
+                                      <img src={qrUrl} alt={site.title} className="w-full h-full object-contain" />
+                                    ) : (
+                                      <QrCode className="w-10 h-10 text-gray-700" />
+                                    )}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-bold text-xs text-gray-900 truncate group-hover:text-amber-600 transition">
+                                      {site.title}
+                                    </div>
+                                    <div className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                                      <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                                      <span>{site.state}</span>
+                                    </div>
+                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[9px] font-bold mt-1">
+                                      {siteCode}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleProcessScannedData(JSON.stringify({
+                                      app: 'Techfusion',
+                                      id: site._id,
+                                      title: site.title,
+                                      code: siteCode,
+                                      state: site.state
+                                    }));
+                                  }}
+                                  className="w-full py-2 px-3 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs uppercase tracking-wide transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.02]"
+                                >
+                                  <QrCode className="w-3.5 h-3.5" />
+                                  <span>Tap to Scan QR Code</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-PANEL 2: LIVE CAMERA SCANNER */}
+                    {scanMethod === 'camera' && (
+                      <div className="max-w-md mx-auto space-y-4 text-center">
+                        <div className="relative rounded-3xl border-2 border-dashed border-amber-400 bg-black aspect-square max-h-[320px] w-full mx-auto overflow-hidden flex items-center justify-center shadow-lg">
+                          <video 
+                            ref={videoRef} 
+                            className="w-full h-full object-cover" 
+                          />
+                          <canvas ref={canvasRef} className="hidden" />
+
+                          {/* Scanner Reticle Overlay */}
+                          <div className="absolute inset-0 border-4 border-amber-400/40 pointer-events-none flex items-center justify-center p-8">
+                            <div className="w-48 h-48 border-2 border-amber-400 rounded-2xl relative">
+                              <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-amber-400 rounded-tl -mt-1 -ml-1" />
+                              <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-amber-400 rounded-tr -mt-1 -mr-1" />
+                              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-amber-400 rounded-bl -mb-1 -ml-1" />
+                              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-amber-400 rounded-br -mb-1 -mr-1" />
+                              {cameraActive && (
+                                <div className="absolute left-0 right-0 h-0.5 bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-bounce top-1/2" />
+                              )}
+                            </div>
+                          </div>
+
+                          {!cameraActive && (
+                            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-white space-y-3">
+                              <Camera className="w-12 h-12 text-amber-400 opacity-80" />
+                              <p className="text-xs text-slate-300">
+                                Click below to start camera and point at the QR code on the admin dashboard or monument plaque.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-center gap-3">
+                          {cameraActive ? (
+                            <button
+                              type="button"
+                              onClick={stopCamera}
+                              className="px-5 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs transition cursor-pointer"
+                            >
+                              Stop Camera
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={startCamera}
+                              className="px-6 py-2.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wide shadow-md transition cursor-pointer flex items-center gap-2"
+                            >
+                              <Camera className="w-4 h-4" />
+                              <span>Start Camera Scan</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUB-PANEL 3: UPLOAD QR IMAGE (Drop downloaded QR) */}
+                    {scanMethod === 'upload' && (
+                      <div className="max-w-md mx-auto space-y-3 text-center">
+                        <div 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="p-8 rounded-3xl border-2 border-dashed border-amber-400 bg-slate-50 hover:bg-amber-50/50 transition cursor-pointer space-y-3 shadow-xs"
+                        >
+                          <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 mx-auto flex items-center justify-center shadow-xs">
+                            <Upload className="w-7 h-7" />
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-sm text-gray-900">
+                              Upload Downloaded QR Image
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+                              Select any QR PNG downloaded from the Admin site info or photo taken on your phone
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-xl bg-[#ff8c00] text-black font-extrabold text-xs uppercase tracking-wider shadow-sm"
+                          >
+                            Browse Image File
+                          </button>
+                        </div>
+                        <input 
+                          ref={fileInputRef} 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleImageUpload} 
+                          className="hidden" 
+                        />
+                      </div>
+                    )}
+
+                    {/* SUB-PANEL 4: ENTER CODE MANUALLY */}
+                    {scanMethod === 'code' && (
+                      <div className="max-w-md mx-auto space-y-3 text-center">
+                        <div className="p-6 rounded-3xl border border-gray-200 bg-slate-50 space-y-4 shadow-xs">
+                          <div className="space-y-1">
+                            <div className="font-bold text-sm text-gray-900">
+                              Enter Unique Monument Code
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Type or paste the token shown in the Admin dashboard (e.g. TOUR-QILA-MUBARAK-3305)
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="text"
+                              value={manualCode}
+                              onChange={(e) => setManualCode(e.target.value)}
+                              placeholder="e.g. TOUR-QILA-MUBARAK-3305"
+                              className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-mono uppercase font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (manualCode) handleProcessScannedData(manualCode);
+                              }}
+                              className="px-5 py-2.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-black text-xs uppercase tracking-wider transition shadow-sm cursor-pointer shrink-0"
+                            >
+                              Verify
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
               </div>
             )}
 

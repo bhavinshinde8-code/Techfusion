@@ -9,6 +9,7 @@ import {
   CheckCircle2, AlertCircle, RefreshCw, Landmark, Award, Flame,
   QrCode, Download
 } from 'lucide-react';
+import QRCode from 'qrcode';
 
 export default function AdminDashboard({ 
   destinations = [], 
@@ -38,6 +39,7 @@ export default function AdminDashboard({
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [photoPlace, setPhotoPlace] = useState(null);
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -267,44 +269,39 @@ export default function AdminDashboard({
     setIsModalOpen(true);
   };
 
+  // Dynamically generate genuine, unique QR Code data URL whenever destination title/code changes
+  useEffect(() => {
+    if (!formData.title && !formData.qrCode) return;
+    const siteCode = formData.qrCode || `TOUR-${(formData.title || 'SITE').toUpperCase().replace(/[^A-Z0-9]/g, '-')}-3305`;
+    const payload = JSON.stringify({
+      app: 'Techfusion',
+      type: 'TOURISM_DESTINATION',
+      id: selectedId || (formData.title ? `site-${formData.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : 'site-custom'),
+      title: formData.title,
+      code: siteCode,
+      state: formData.state || 'Maharashtra, India'
+    });
+
+    QRCode.toDataURL(payload, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    }).then(url => {
+      setQrDataUrl(url);
+    }).catch(err => {
+      console.warn('QR generation error:', err);
+    });
+  }, [formData.title, formData.qrCode, selectedId, formData.state]);
+
   // QR Code Actions
   const handleDownloadQR = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.fillStyle = '#111827';
-    // QR Markers
-    ctx.fillRect(20, 20, 70, 70);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(30, 30, 50, 50);
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(40, 40, 30, 30);
-
-    ctx.fillRect(166, 20, 70, 70);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(176, 30, 50, 50);
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(186, 40, 30, 30);
-
-    ctx.fillRect(20, 166, 70, 70);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(30, 176, 50, 50);
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(40, 186, 30, 30);
-
-    for (let i = 0; i < 70; i++) {
-      const rx = 96 + (i % 7) * 9;
-      const ry = 96 + Math.floor(i / 7) * 9;
-      if ((i * 13) % 4 !== 0) {
-        ctx.fillRect(rx, ry, 7, 7);
-      }
-    }
+    if (!qrDataUrl) return;
     const link = document.createElement('a');
-    link.download = `QR-${(formData.title || 'destination').replace(/\s+/g, '_')}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.download = `QR-${(formData.title || 'destination').replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+    link.href = qrDataUrl;
     link.click();
   };
 
@@ -1543,8 +1540,12 @@ export default function AdminDashboard({
                   {/* QR Code Module */}
                   <div className="rounded-2xl border border-gray-200/80 bg-[#f8fafc] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                      <div className="w-14 h-14 bg-white border border-gray-200 rounded-xl p-1.5 flex items-center justify-center shrink-0 shadow-xs">
-                        <QrCode className="w-10 h-10 text-gray-800" />
+                      <div className="w-14 h-14 bg-white border border-gray-200 rounded-xl p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                        {qrDataUrl ? (
+                          <img src={qrDataUrl} alt="Site QR" className="w-full h-full object-contain" />
+                        ) : (
+                          <QrCode className="w-10 h-10 text-gray-800" />
+                        )}
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-gray-800">
