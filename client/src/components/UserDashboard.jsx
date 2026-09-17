@@ -4,7 +4,7 @@ import {
   Search, X, MapPin, Clock, Trash2, ArrowRight, 
   QrCode, BookOpen, Award, PhoneCall, CheckCircle, 
   Sparkles, Compass, Check, LogOut, ChevronRight, ChevronUp,
-  Camera, Shield, Heart
+  Camera, Shield, Heart, Globe
 } from 'lucide-react';
 
 export default function UserDashboard({ 
@@ -120,10 +120,25 @@ export default function UserDashboard({
             {/* Left Column: Greeting & Info */}
             <div className="space-y-2 max-w-xl">
               
-              {/* Traveler Dashboard Pill */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-semibold tracking-wide shadow-sm">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Traveler Dashboard</span>
+              {/* Traveler Dashboard Pill & Explore Web Button */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-semibold tracking-wide shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Traveler Dashboard</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (setCurrentView) setCurrentView('landing');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black text-[11px] font-extrabold tracking-wide uppercase transition shadow-md cursor-pointer hover:scale-105"
+                  title="Explore Main Webpage"
+                >
+                  <Globe className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Explore Web →</span>
+                </button>
               </div>
 
               {/* Headline with @Username highlighted in vibrant orange */}
@@ -294,6 +309,22 @@ export default function UserDashboard({
                       <span>Contact Us</span>
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* 6. Explore Web (Direct link to main webpage) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (setCurrentView) setCurrentView('landing');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-300 font-bold transition-all cursor-pointer shadow-sm group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Globe className="w-4 h-4 text-amber-600 group-hover:rotate-12 transition-transform" />
+                      <span>Explore Web</span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-amber-600 group-hover:translate-x-0.5 transition-transform" />
                   </button>
 
                 </div>
