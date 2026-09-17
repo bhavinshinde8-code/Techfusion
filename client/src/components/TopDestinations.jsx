@@ -1,86 +1,128 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, ArrowRight, Heart, Clock, Flame } from 'lucide-react';
+import { MapPin, ArrowRight, Heart, Clock, Flame, Sparkles } from 'lucide-react';
 
-export default function TopDestinations({ destinations, onSelectPlace }) {
-  const { favorites, toggleFavorite } = useAuth();
+export default function TopDestinations({ destinations = [], onSelectPlace }) {
+  const { favorites = [], toggleFavorite } = useAuth();
 
-  // Filter only published destinations and sort trending ones first
-  const activeDestinations = destinations
-    .filter(d => d.isPublished !== false)
-    .sort((a, b) => (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0));
+  // Filter published destinations
+  const published = destinations.filter(d => d.isPublished !== false);
+  
+  // All destinations marked as Trending by Admin
+  const trendingList = published.filter(d => !!d.isTrending);
+  const nonTrendingList = published.filter(d => !d.isTrending);
+
+  // Guarantee that ALL trending destinations are visible!
+  // If fewer than 3 trending places, complement with non-trending to keep minimum 3 cards
+  const displayedDestinations = trendingList.length > 0
+    ? [...trendingList, ...nonTrendingList].slice(0, Math.max(trendingList.length, 3))
+    : published.slice(0, 3);
 
   return (
-    <section id="destinations" className="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+    <section id="destinations" className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
       {/* Section Header */}
-      <div className="text-center mb-7 sm:mb-8">
-        <div className="text-amber-600 text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5">
-          Iconic Landmarks
+      <div className="text-center mb-8 sm:mb-10">
+        <div className="inline-flex items-center gap-1.5 text-amber-700 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] mb-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 shadow-xs">
+          {trendingList.length > 0 ? (
+            <>
+              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-bounce" />
+              <span>{trendingList.length} Trending Tourism Sites Active</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Iconic Maharashtra Landmarks</span>
+            </>
+          )}
         </div>
-        <h2 className="font-serif text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1.5">
-          Top Destinations
+
+        <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-2 flex items-center justify-center gap-2.5">
+          <span>Top Destinations</span>
+          {trendingList.length > 0 && (
+            <span className="text-xs font-sans font-black px-2.5 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm flex items-center gap-1">
+              <Flame className="w-3 h-3 fill-current" />
+              <span>Trending Live</span>
+            </span>
+          )}
         </h2>
-        <p className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm">
-          Handpicked architectural marvels, sacred pilgrimage capitals, and ancient fortresses defining India's grandeur.
+
+        <p className="text-gray-500 max-w-xl mx-auto text-xs sm:text-sm leading-relaxed">
+          {trendingList.length > 0
+            ? "Featured tourist attractions and heritage circuits marked as trending by tourism administrators, synced live with MongoDB Atlas."
+            : "Handpicked architectural marvels, sacred pilgrimage capitals, and ancient fortresses defining Maharashtra's grandeur."}
         </p>
       </div>
 
-      {/* 3-Card Responsive Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {activeDestinations.slice(0, 3).map((place) => {
+      {/* Responsive Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {displayedDestinations.map((place) => {
           const isFav = favorites.includes(place._id);
+          const isTrending = !!place.isTrending;
+
           return (
             <div 
               key={place._id}
               onClick={() => onSelectPlace(place)}
-              className="group bg-white border border-gray-200 hover:border-amber-500/80 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col shadow-sm"
+              className={`group bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl flex flex-col border ${
+                isTrending 
+                  ? 'border-orange-400 ring-2 ring-orange-400/25 shadow-md shadow-orange-500/10' 
+                  : 'border-gray-200 hover:border-amber-400 shadow-sm'
+              }`}
             >
-              {/* Image & Badges */}
-              <div className="relative h-44 sm:h-48 overflow-hidden">
+              {/* Image & Badges Container */}
+              <div className="relative h-48 sm:h-52 overflow-hidden">
                 <img 
                   src={place.image} 
                   alt={place.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-amber-700 border border-amber-300 shadow-sm uppercase tracking-wider">
+                {/* Badges on Top Left */}
+                <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 max-w-[75%]">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/95 text-amber-800 border border-amber-300 shadow-xs uppercase tracking-wider backdrop-blur-xs">
                     {place.category}
                   </span>
-                  {place.isTrending && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm flex items-center gap-0.5 uppercase tracking-wider">
-                      <Flame className="w-2.5 h-2.5 fill-current" />
+
+                  {isTrending && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md flex items-center gap-1 uppercase tracking-wider animate-in fade-in">
+                      <Flame className="w-3 h-3 fill-current animate-pulse" />
                       <span>Trending</span>
                     </span>
                   )}
                 </div>
 
+                {/* Favorite Heart Button */}
                 <button 
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFavorite(place._id);
                   }}
-                  className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md border transition ${
+                  className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition cursor-pointer shadow-sm ${
                     isFav 
-                      ? 'bg-red-500 text-white border-red-500 shadow-sm' 
-                      : 'bg-white/80 border-white text-gray-700 hover:text-red-500'
+                      ? 'bg-red-500 text-white border-red-500 hover:bg-red-600 scale-110' 
+                      : 'bg-white/85 border-white text-gray-700 hover:text-red-500 hover:bg-white'
                   }`}
+                  title={isFav ? "Saved to Wishlist" : "Save to Wishlist"}
                 >
-                  <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
                 </button>
 
-                <div className="absolute bottom-2.5 left-2.5 text-[11px] text-white flex items-center gap-1 font-semibold drop-shadow-md">
-                  <MapPin className="w-3 h-3 text-amber-400" />
-                  {place.state}
+                {/* Location Pill on Bottom Left */}
+                <div className="absolute bottom-3 left-3 text-xs text-white flex items-center gap-1.5 font-bold drop-shadow-md">
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{place.state}</span>
                 </div>
               </div>
 
-              {/* Body */}
+              {/* Card Body */}
               <div className="p-4 sm:p-5 flex flex-col flex-1">
-                <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-900 mb-1.5 group-hover:text-amber-600 transition">
-                  {place.title}
-                </h3>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-gray-900 group-hover:text-amber-600 transition leading-snug">
+                    {place.title}
+                  </h3>
+                </div>
                 
                 <p className="text-gray-500 text-xs line-clamp-2 mb-3.5 leading-relaxed">
                   {place.shortHistory}
@@ -97,13 +139,14 @@ export default function TopDestinations({ destinations, onSelectPlace }) {
 
                 {/* Card Footer */}
                 <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                  <span className="text-gray-500 flex items-center gap-1">
+                  <span className="text-gray-500 flex items-center gap-1 font-medium">
                     <Clock className="w-3 h-3 text-emerald-600" />
-                    {place.timeline?.length || 4} Milestones
+                    <span>{place.timeline?.length || 4} Milestones</span>
                   </span>
 
                   <span className="text-amber-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Explore Timeline <ArrowRight className="w-3 h-3" />
+                    <span>Explore Site</span>
+                    <ArrowRight className="w-3 h-3 stroke-[2.5]" />
                   </span>
                 </div>
               </div>
