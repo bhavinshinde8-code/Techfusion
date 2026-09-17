@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Sun, Globe, ChevronDown, LogOut, User } from 'lucide-react';
+import { Shield, Sun, Globe, ChevronDown, LogOut, User, ArrowRight } from 'lucide-react';
 
 export default function Navbar({
   currentView,
@@ -99,10 +99,10 @@ export default function Navbar({
           ) : (
             <button
               onClick={() => openAuthModal('login')}
-              className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold transition shadow-sm hover:scale-105 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black text-[11px] sm:text-xs font-black tracking-wide uppercase transition-all duration-200 shadow-[0_4px_14px_rgba(255,140,0,0.35)] hover:shadow-[0_6px_18px_rgba(255,140,0,0.45)] hover:scale-105 cursor-pointer"
             >
-              <User className="w-3.5 h-3.5" />
-              <span>Sign Up / Log In</span>
+              <span>LOG IN</span>
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           )}
 
