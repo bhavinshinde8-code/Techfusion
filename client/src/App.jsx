@@ -125,6 +125,7 @@ export default function App() {
             destinations={destinations}
             onDestinationsChange={setDestinations}
             setCurrentView={setCurrentView}
+            onSelectPlace={(place) => setSelectedPlace(place)}
           />
         </main>
       )}

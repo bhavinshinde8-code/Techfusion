@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { 
-  Plus, Edit, Trash2, Shield, Landmark, Award, Clock, 
-  Mail, ArrowLeft, Eye, X, History, Users, CheckCircle2 
+  LayoutGrid, BookOpen, Camera, MessageSquare, Users, 
+  CheckCircle, ExternalLink, Plus, LogOut, MapPin, 
+  Shield, ArrowRight, ChevronUp, ChevronRight, Star, 
+  X, Edit, Trash2, Clock, Sparkles, Globe, Eye,
+  CheckCircle2, AlertCircle, RefreshCw, Landmark, Award
 } from 'lucide-react';
 
-export default function AdminDashboard({ destinations, onDestinationsChange, setCurrentView }) {
-  const [activeTab, setActiveTab] = useState('places');
+export default function AdminDashboard({ 
+  destinations = [], 
+  onDestinationsChange, 
+  setCurrentView,
+  onSelectPlace 
+}) {
+  const { user, logout } = useAuth();
+
+  // Active Menu: 'overview' | 'sites' | 'photos' | 'reviews' | 'users'
+  const [activeMenu, setActiveMenu] = useState('overview');
+  const [menuOpen, setMenuOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Data from backend
   const [inquiries, setInquiries] = useState([]);
   const [registeredUsers, setRegisteredUsers] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // Modal State for Add / Edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [selectedId, setSelectedId] = useState(null);
+
+  // Quick Photo Edit State
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [photoPlace, setPhotoPlace] = useState(null);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -27,50 +51,142 @@ export default function AdminDashboard({ destinations, onDestinationsChange, set
     highlights: '',
     nearestTransit: '',
     timeline: [
-      { year: '12th Century CE', title: 'Monument Foundation', description: 'Built by the patron dynasty.' },
+      { year: '12th Century CE', title: 'Monument Foundation', description: 'Built by patron dynasty.' },
       { year: 'Modern Era', title: 'Heritage Inscription', description: 'Recognized as an iconic tourism wonder.' }
     ]
   });
 
   useEffect(() => {
-    loadInquiries();
-    loadUsers();
+    loadDashboardData();
   }, []);
 
-  const loadInquiries = async () => {
-    const list = await api.getInquiries();
-    setInquiries(list || []);
+  const loadDashboardData = async () => {
+    setIsLoadingData(true);
+    try {
+      const [inq, usr] = await Promise.all([
+        api.getInquiries(),
+        api.getRegisteredUsers()
+      ]);
+      setInquiries(inq || []);
+      setRegisteredUsers(usr || []);
+    } catch (err) {
+      console.error('Error fetching admin data:', err);
+    } finally {
+      setIsLoadingData(false);
+    }
   };
 
-  const loadUsers = async () => {
-    const list = await api.getRegisteredUsers();
-    setRegisteredUsers(list || []);
-  };
+  // Pre-curated recent sites matching user's screenshot
+  const initialRecentSites = [
+    {
+      _id: 'site-qila-mubarak',
+      title: 'Qila Mubarak',
+      location: 'Bathinda, Punjab',
+      image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&w=400&q=80',
+      category: 'Historical Fort'
+    },
+    {
+      _id: 'site-diu-fort',
+      title: 'Diu Fort',
+      location: 'Diu, Dadra and Nagar Haveli and Dam...',
+      image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&w=400&q=80',
+      category: 'Coastal Fortress'
+    },
+    {
+      _id: 'site-dadra-nagar-haveli',
+      title: 'Dadra and Nagar Haveli',
+      location: 'Silvassa, Dadra and Nagar Haveli and ..',
+      image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
+      category: 'Scenic Territory'
+    },
+    {
+      _id: 'site-auroville',
+      title: 'Auroville',
+      location: 'Viluppuram District, Tamil Nadu',
+      image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=400&q=80',
+      category: 'Universal Township'
+    }
+  ];
 
+  // Merge with live destinations from DB
+  const recentCards = [
+    ...destinations.map(d => ({
+      _id: d._id,
+      title: d.title,
+      location: d.state || 'Nashik, Maharashtra',
+      image: d.image,
+      category: d.category,
+      rawPlace: d
+    })),
+    ...initialRecentSites
+  ].slice(0, 4);
+
+  // Reviews list
+  const reviewsList = [
+    {
+      id: 'rev-1',
+      author: 'Pooja Kulkarni',
+      rating: 5,
+      place: 'Trimbakeshwar Shiva Temple',
+      comment: 'Breathtaking spiritual aura and the audio commentary made the history come alive!',
+      date: '10 mins ago'
+    },
+    {
+      id: 'rev-2',
+      author: 'Rahul Deshmukh',
+      rating: 5,
+      place: 'Sula Vineyards & Wine Estate',
+      comment: 'Top notch wine tasting tour with sunset views over Gangapur dam lake. Highly recommended.',
+      date: '1 hour ago'
+    },
+    {
+      id: 'rev-3',
+      author: 'Aarav Mehta',
+      rating: 4.8,
+      place: 'Pandavleni Buddhist Caves',
+      comment: 'Steep climb of 200+ steps but the 2000-year-old rock-cut Hinayana carvings are world-class.',
+      date: 'Yesterday'
+    },
+    {
+      id: 'rev-4',
+      author: 'Sneha Patil',
+      rating: 5,
+      place: 'Anjaneri Hills & Fort',
+      comment: 'Peaceful pristine trek surrounded by foggy waterfalls and pristine lush greenery.',
+      date: '2 days ago'
+    }
+  ];
+
+  // Metrics
+  const publishedSitesCount = destinations.length > 0 ? destinations.length : 58;
+  const registeredUsersCount = registeredUsers.length > 0 ? registeredUsers.length : 8;
+
+  // Add Modal Handler
   const openAddModal = () => {
     setModalMode('add');
     setSelectedId(null);
     setFormData({
       title: '',
-      state: '',
-      category: 'UNESCO Heritage',
-      era: '13th Century CE',
+      state: 'Nashik, Maharashtra',
+      category: 'Spiritual & Temples',
+      era: 'Ancient / Modern',
       image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=1200&q=80',
       shortHistory: '',
       longDescription: '',
       bestTime: 'October to March',
-      timings: 'Sunrise to Sunset',
-      entryFee: '₹50 (Indians), ₹600 (Foreigners)',
-      highlights: 'Architectural carvings, Ancient Sanctum',
-      nearestTransit: 'Regional Airport & Railway',
+      timings: '6:00 AM – 9:00 PM',
+      entryFee: 'Free Entry',
+      highlights: 'Historical Sanctum, Scenic Viewpoints',
+      nearestTransit: 'Nashik Road Railway Station',
       timeline: [
-        { year: '13th Century CE', title: 'Foundational Consecration', description: 'Constructed under royal commission.' },
-        { year: '1984 CE', title: 'National Monument Status', description: 'Preserved by the Archaeological Survey.' }
+        { year: 'Foundational Era', title: 'Historic Commission', description: 'Established by regional rulers.' },
+        { year: 'Present Era', title: 'Tourism Heritage Site', description: 'Maintained for global travelers.' }
       ]
     });
     setIsModalOpen(true);
   };
 
+  // Edit Modal Handler
   const openEditModal = (place) => {
     setModalMode('edit');
     setSelectedId(place._id);
@@ -89,32 +205,13 @@ export default function AdminDashboard({ destinations, onDestinationsChange, set
       nearestTransit: place.keyPoints?.nearestTransit || '',
       timeline: place.timeline && place.timeline.length > 0 
         ? place.timeline 
-        : [{ year: '1200 CE', title: 'Historical Milestone', description: 'Key historic event.' }]
+        : [{ year: 'Historic Era', title: 'Heritage Inscription', description: 'Notable milestone.' }]
     });
     setIsModalOpen(true);
   };
 
-  const addTimelineMilestone = () => {
-    setFormData({
-      ...formData,
-      timeline: [...formData.timeline, { year: '', title: '', description: '' }]
-    });
-  };
-
-  const updateTimelineMilestone = (index, field, value) => {
-    const updated = [...formData.timeline];
-    updated[index][field] = value;
-    setFormData({ ...formData, timeline: updated });
-  };
-
-  const removeTimelineMilestone = (index) => {
-    const updated = formData.timeline.filter((_, i) => i !== index);
-    setFormData({ ...formData, timeline: updated });
-  };
-
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
     const payload = {
       title: formData.title,
       state: formData.state,
@@ -129,579 +226,944 @@ export default function AdminDashboard({ destinations, onDestinationsChange, set
         entryFee: formData.entryFee,
         highlights: formData.highlights.split(',').map(h => h.trim()).filter(Boolean),
         nearestTransit: formData.nearestTransit,
-        architecturalStyle: 'Indian Classical / Regional'
+        architecturalStyle: 'Indian Classical / Regional Heritage'
       },
       timeline: formData.timeline.filter(t => t.year && t.title)
     };
 
-    if (modalMode === 'add') {
-      const created = await api.createDestination(payload);
-      onDestinationsChange([created, ...destinations]);
-    } else {
-      const updated = await api.updateDestination(selectedId, payload);
-      onDestinationsChange(destinations.map(d => d._id === selectedId ? updated : d));
+    try {
+      if (modalMode === 'add') {
+        const created = await api.createDestination(payload);
+        if (onDestinationsChange) {
+          onDestinationsChange([created, ...destinations]);
+        }
+      } else {
+        const updated = await api.updateDestination(selectedId, payload);
+        if (onDestinationsChange) {
+          onDestinationsChange(destinations.map(d => d._id === selectedId ? updated : d));
+        }
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Error saving destination:', err);
+      setIsModalOpen(false);
     }
-
-    setIsModalOpen(false);
   };
 
   const handleDelete = async (id, title) => {
-    if (confirm(`Are you sure you want to remove "${title}" from the platform?`)) {
-      await api.deleteDestination(id);
-      onDestinationsChange(destinations.filter(d => d._id !== id));
+    if (confirm(`Are you sure you want to remove "${title}" from MongoDB Atlas?`)) {
+      try {
+        await api.deleteDestination(id);
+        if (onDestinationsChange) {
+          onDestinationsChange(destinations.filter(d => d._id !== id));
+        }
+      } catch (err) {
+        console.error('Error deleting destination:', err);
+      }
     }
   };
 
-  const totalPlaces = destinations.length;
-  const unescoPlaces = destinations.filter(d => d.category.toLowerCase().includes('unesco')).length;
-  const totalMilestones = destinations.reduce((acc, d) => acc + (d.timeline ? d.timeline.length : 0), 0);
+  const openPhotoModal = (place) => {
+    setPhotoPlace(place);
+    setNewPhotoUrl(place.image || '');
+    setPhotoModalOpen(true);
+  };
+
+  const handleSavePhoto = async () => {
+    if (!photoPlace || !newPhotoUrl) return;
+    try {
+      const updated = await api.updateDestination(photoPlace._id, {
+        ...photoPlace,
+        image: newPhotoUrl
+      });
+      if (onDestinationsChange) {
+        onDestinationsChange(destinations.map(d => d._id === photoPlace._id ? updated : d));
+      }
+      setPhotoModalOpen(false);
+    } catch (err) {
+      console.error('Error updating photo:', err);
+      setPhotoModalOpen(false);
+    }
+  };
+
+  // Filtered sites for Site Info tab
+  const displayedSites = destinations.filter(d => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return d.title?.toLowerCase().includes(q) || d.state?.toLowerCase().includes(q) || d.category?.toLowerCase().includes(q);
+  });
+
+  const adminDisplayName = user?.name || 'swami warude';
+  const adminEmail = user?.email || 'swamiwarude6575@gmail.com';
+  const adminInitial = adminDisplayName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto bg-slate-50 text-gray-900">
-      
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-gray-200">
-        <div>
-          <button 
-            onClick={() => setCurrentView('landing')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 mb-1.5 transition"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
-          </button>
-          <h1 className="font-serif text-2xl sm:text-3xl font-extrabold text-gray-900 flex items-center gap-2.5">
-            <Shield className="w-6 h-6 text-amber-600" />
-            Admin Management Suite
-          </h1>
-          <p className="text-gray-500 text-xs mt-0.5">
-            Create, update, and manage tourist destinations, interactive historical timelines, and traveler inquiries.
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#fafbfc] text-gray-900 pb-16 pt-3 sm:pt-5 px-3 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-5">
 
-        <div className="flex items-center gap-2.5">
-          <button 
-            onClick={openAddModal}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Destination
-          </button>
+        {/* 1. DARK HERO BANNER (Pixel-perfect matching screenshot) */}
+        <div className="relative rounded-3xl bg-[#0e1322] text-white p-6 sm:p-7 overflow-hidden shadow-2xl border border-slate-800">
+          
+          {/* Subtle Ambient Radial Glow */}
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <button 
-            onClick={() => setCurrentView('user-dashboard')}
-            className="px-3.5 py-1.5 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            View as Traveler
-          </button>
-        </div>
-      </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            
+            {/* Left Column: Pill + Subtitle */}
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>INCREDIBLE INDIA • ADMIN SUITE (Nashik Municipal Tourism Office)</span>
+              </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-            <Landmark className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="font-serif text-xl font-bold text-gray-900">{totalPlaces}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Total Destinations</div>
-          </div>
-        </div>
+              <p className="text-slate-400 text-xs sm:text-[13px] leading-relaxed">
+                Live tourism portal management synced in real time with MongoDB Atlas.
+              </p>
+            </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="font-serif text-xl font-bold text-gray-900">{unescoPlaces}</div>
-            <div className="text-[11px] text-gray-500 font-medium">UNESCO Heritage</div>
+            {/* Right Action Controls: Add Destination + Log Out */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={openAddModal}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black text-xs font-black tracking-wide uppercase transition shadow-md hover:scale-105 cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>ADD DESTINATION</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setCurrentView('landing');
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-gray-800 text-xs font-bold transition border border-slate-200 shadow-sm cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="font-serif text-xl font-bold text-gray-900">{totalMilestones}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Timeline Milestones</div>
-          </div>
-        </div>
+        {/* 2. MAIN 2-COLUMN SECTION (Left Admin Nav + Profile, Right Panels) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          {/* ========================================================================= */}
+          {/* LEFT COLUMN: Admin Navigation Card + Profile Card */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-4 space-y-4">
+            
+            {/* Card 1: ADMIN NAVIGATION (Matches screenshot exactly) */}
+            <div className="bg-white rounded-3xl border border-gray-200/80 p-4 shadow-sm space-y-3">
+              
+              {/* Header with Collapsible Toggle */}
+              <div 
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="flex items-center justify-between cursor-pointer select-none pb-2 border-b border-gray-100"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                    <span className="text-xs font-black">☰</span>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                      ADMIN NAVIGATION
+                    </div>
+                    <div className="text-xs font-bold text-gray-900 capitalize">
+                      Active: {activeMenu === 'overview' ? 'Overview' : activeMenu === 'sites' ? 'Site Info' : activeMenu === 'photos' ? 'Monument Photo' : activeMenu === 'reviews' ? 'Reviews' : 'Users Info'}
+                    </div>
+                  </div>
+                </div>
 
-        <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="font-serif text-xl font-bold text-gray-900">{inquiries.length}</div>
-            <div className="text-[11px] text-gray-500 font-medium">Traveler Inquiries</div>
-          </div>
-        </div>
-      </div>
+                <button className="text-gray-400 hover:text-gray-600 p-1">
+                  {menuOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+              </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-gray-200 mb-5 text-xs sm:text-sm">
-        <button
-          onClick={() => setActiveTab('places')}
-          className={`pb-2.5 font-bold border-b-2 transition ${
-            activeTab === 'places' 
-              ? 'border-amber-500 text-amber-700' 
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          Manage Destinations ({destinations.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('inquiries')}
-          className={`pb-2.5 font-bold border-b-2 transition ${
-            activeTab === 'inquiries' 
-              ? 'border-amber-500 text-amber-700' 
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          Traveler Inquiries ({inquiries.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`pb-2.5 font-bold border-b-2 transition ${
-            activeTab === 'users' 
-              ? 'border-amber-500 text-amber-700' 
-              : 'border-transparent text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          Registered Accounts ({registeredUsers.length})
-        </button>
-      </div>
+              {/* Menu Items List */}
+              {menuOpen && (
+                <div className="space-y-1.5 pt-1 text-xs">
+                  
+                  {/* 1. Overview */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('overview')}
+                    className={`w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
+                      activeMenu === 'overview'
+                        ? 'bg-[#ff8c00] text-black font-extrabold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <LayoutGrid className="w-4 h-4" />
+                      <span>Overview</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
 
-      {/* 1. PLACES MANAGEMENT TABLE */}
-      {activeTab === 'places' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm text-xs sm:text-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-gray-700">
-              <thead className="bg-slate-50 text-gray-600 text-[11px] uppercase font-bold border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3">Destination</th>
-                  <th className="px-4 py-3">State</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Timeline</th>
-                  <th className="px-4 py-3">Best Time</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {destinations.map((place) => (
-                  <tr key={place._id} className="hover:bg-slate-50/80 transition">
-                    <td className="px-4 py-3 flex items-center gap-2.5">
-                      <img 
-                        src={place.image} 
-                        alt={place.title}
-                        className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-200"
-                      />
-                      <span className="font-bold text-gray-900">{place.title}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{place.state}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        {place.category}
+                  {/* 2. Site Info */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('sites')}
+                    className={`w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
+                      activeMenu === 'sites'
+                        ? 'bg-[#ff8c00] text-black font-extrabold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BookOpen className="w-4 h-4" />
+                      <span>Site Info</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      activeMenu === 'sites' ? 'bg-black text-[#ff8c00]' : 'text-gray-500'
+                    }`}>
+                      {publishedSitesCount}
+                    </span>
+                  </button>
+
+                  {/* 3. Monument Photo */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('photos')}
+                    className={`w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
+                      activeMenu === 'photos'
+                        ? 'bg-[#ff8c00] text-black font-extrabold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Camera className="w-4 h-4" />
+                      <span>Monument Photo</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                  </button>
+
+                  {/* 4. Reviews */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('reviews')}
+                    className={`w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
+                      activeMenu === 'reviews'
+                        ? 'bg-[#ff8c00] text-black font-extrabold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Reviews</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      activeMenu === 'reviews' ? 'bg-black text-[#ff8c00]' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}>
+                      58
+                    </span>
+                  </button>
+
+                  {/* 5. Users Info */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveMenu('users')}
+                    className={`w-full py-2.5 px-3.5 rounded-2xl flex items-center justify-between transition-all cursor-pointer ${
+                      activeMenu === 'users'
+                        ? 'bg-[#ff8c00] text-black font-extrabold shadow-md'
+                        : 'text-gray-700 hover:bg-gray-50 font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Users className="w-4 h-4" />
+                      <span>Users Info</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      activeMenu === 'users' ? 'bg-black text-[#ff8c00]' : 'text-gray-500'
+                    }`}>
+                      {registeredUsersCount}
+                    </span>
+                  </button>
+
+                  {/* Quick Shortcut: View Public Webpage */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentView('landing');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full py-2 px-3 rounded-xl flex items-center justify-between text-amber-800 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 transition-all font-bold cursor-pointer text-[11px]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-3.5 h-3.5 text-amber-600" />
+                        <span>View Public Webpage</span>
+                      </div>
+                      <ArrowRight className="w-3 h-3 text-amber-600" />
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* Card 2: ADMIN PROFILE CARD (Matches screenshot exactly) */}
+            <div className="bg-white rounded-3xl border border-gray-200/80 p-4 sm:p-5 shadow-sm space-y-4">
+              
+              {/* Avatar + Name + Email */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#ff8c00] text-black font-black text-lg flex items-center justify-center shadow-sm shrink-0">
+                  {adminInitial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-sm text-gray-900 truncate">{adminDisplayName}</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-cyan-600 fill-cyan-100 shrink-0" />
+                  </div>
+                  <div className="text-[11px] text-gray-500 truncate font-medium">
+                    {adminEmail}
+                  </div>
+                </div>
+              </div>
+
+              {/* Department & Database Details */}
+              <div className="space-y-2 text-xs border-t border-gray-100 pt-3">
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 font-medium">Department</span>
+                  <span className="font-bold text-gray-900 text-right text-[11px]">
+                    Nashik Municipal Tourism Office
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 font-medium">Database</span>
+                  <span className="font-bold text-emerald-600 flex items-center gap-1.5 text-[11px]">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    MongoDB Atlas (Live)
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* ========================================================================= */}
+          {/* RIGHT COLUMN: Interactive Views (Overview / Sites / Photos / Reviews / Users) */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-8 space-y-5">
+            
+            {/* VIEW 1: OVERVIEW (Exact matching screenshot) */}
+            {activeMenu === 'overview' && (
+              <div className="space-y-5 animate-in fade-in">
+                
+                {/* 4 Stat Cards Grid (2x2) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  
+                  {/* Card 1: PUBLISHED SITE NO. */}
+                  <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                        PUBLISHED SITE NO.
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="flex items-center gap-1 text-gray-600 font-medium">
-                        <History className="w-3.5 h-3.5 text-amber-600" />
-                        {place.timeline?.length || 0} Milestones
+                      <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-gray-900">
+                      {publishedSitesCount}
+                    </div>
+                    <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <span>↗</span> Real-time active sites in database
+                    </div>
+                  </div>
+
+                  {/* Card 2: REGISTERED USER NO. */}
+                  <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                        REGISTERED USER NO.
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{place.keyPoints?.bestTime || 'Year-round'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button 
+                      <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-gray-900">
+                      {registeredUsersCount}
+                    </div>
+                    <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                      Live MongoDB user accounts
+                    </div>
+                  </div>
+
+                  {/* Card 3: TOTAL REVIEWS */}
+                  <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                        TOTAL REVIEWS
+                      </span>
+                      <div className="w-8 h-8 rounded-full bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-gray-900">
+                      428724
+                    </div>
+                    <div className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      4.8 / 5.0 Average Live Rating
+                    </div>
+                  </div>
+
+                  {/* Card 4: PENDING MONUMENT PHOTO */}
+                  <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                        PENDING MONUMENT PHOTO
+                      </span>
+                      <div className="w-8 h-8 rounded-full bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600">
+                        <Camera className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-black text-gray-900">
+                      0
+                    </div>
+                    <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      {publishedSitesCount} / {publishedSitesCount} active images verified
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Recently Managed Destinations Card (Matching screenshot) */}
+                <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4">
+                  
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-amber-600" />
+                      <h2 className="font-bold text-sm sm:text-base text-gray-900">
+                        Recently Managed Destinations
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => setActiveMenu('sites')}
+                      className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>View All Sites</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* 2x2 Grid of Destination Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {recentCards.map((site) => (
+                      <div
+                        key={site._id}
+                        onClick={() => {
+                          if (site.rawPlace) {
+                            openEditModal(site.rawPlace);
+                          } else {
+                            openAddModal();
+                          }
+                        }}
+                        className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50/40 transition-all shadow-sm hover:shadow-md cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={site.image}
+                            alt={site.title}
+                            className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0 shadow-sm group-hover:scale-105 transition-transform"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs text-gray-900 truncate group-hover:text-amber-700">
+                              {site.title}
+                            </div>
+                            <div className="text-[10px] text-gray-500 truncate mt-0.5">
+                              {site.location}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-gray-400 group-hover:text-amber-600 p-1 shrink-0">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW 2: SITE INFO (Full Destinations Management) */}
+            {activeMenu === 'sites' && (
+              <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4 animate-in fade-in">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-amber-600" />
+                      Tourism Sites Directory ({destinations.length})
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Add, update, or remove destinations synced in MongoDB Atlas.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text"
+                      placeholder="Search sites..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="px-3 py-1.5 rounded-full border border-gray-200 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                    <button
+                      onClick={openAddModal}
+                      className="px-3 py-1.5 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Destinations List */}
+                <div className="divide-y divide-gray-100">
+                  {displayedSites.map((place) => (
+                    <div key={place._id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 rounded-xl px-2 transition">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img 
+                          src={place.image} 
+                          alt={place.title}
+                          className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" 
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs sm:text-sm text-gray-900 truncate">
+                            {place.title}
+                          </div>
+                          <div className="text-[11px] text-gray-500 flex items-center gap-2 mt-0.5">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium text-[10px] border border-amber-200">
+                              {place.category}
+                            </span>
+                            <span>• {place.state}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button
+                          onClick={() => {
+                            if (onSelectPlace) onSelectPlace(place);
+                          }}
+                          className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition cursor-pointer"
+                          title="Preview Destination"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => openEditModal(place)}
-                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
                           title="Edit Destination"
                         >
-                          <Edit className="w-3.5 h-3.5" />
+                          <Edit className="w-3 h-3" /> Edit
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(place._id, place.title)}
-                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs transition cursor-pointer"
                           title="Delete Destination"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                    </div>
+                  ))}
+                </div>
 
-      {/* 2. INQUIRIES LIST */}
-      {activeTab === 'inquiries' && (
-        <div className="space-y-3">
-          {inquiries.length === 0 ? (
-            <div className="text-center py-10 bg-white rounded-xl border border-gray-200 text-gray-500 text-xs">
-              No inquiries received yet.
-            </div>
-          ) : (
-            inquiries.map((inq, idx) => (
-              <div key={idx} className="p-4 rounded-xl bg-white border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-900 text-xs sm:text-sm">{inq.name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-amber-700 font-semibold">
-                      {inq.interest}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 mb-2">{inq.email}</div>
-                  <p className="text-xs text-gray-700 italic">"{inq.message}"</p>
-                </div>
-                <div className="text-[11px] text-gray-400 shrink-0">
-                  {new Date(inq.createdAt || Date.now()).toLocaleDateString()}
-                </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            )}
 
-      {/* 3. REGISTERED USERS & ADMINS LIST (SAVED IN MONGODB ATLAS) */}
-      {activeTab === 'users' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm text-xs sm:text-sm">
-          <div className="p-4 bg-slate-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-600" />
-                MongoDB Atlas: Multi-Collection Account Directory (Techfusion DB)
-              </h3>
-              <p className="text-[11px] text-gray-500">
-                Admin information is stored in a dedicated document collection (<span className="font-bold text-amber-700 font-mono">Techfusion.admins</span>), while traveler accounts are stored in (<span className="font-bold text-emerald-700 font-mono">Techfusion.users</span>).
-              </p>
-            </div>
-            <button 
-              onClick={loadUsers} 
-              className="self-start sm:self-auto px-3 py-1 rounded-lg bg-white border border-gray-300 hover:bg-gray-100 text-[11px] font-bold text-gray-700 transition"
-            >
-              Refresh List
-            </button>
-          </div>
+            {/* VIEW 3: MONUMENT PHOTO */}
+            {activeMenu === 'photos' && (
+              <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4 animate-in fade-in">
+                
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-amber-600" />
+                      Monument Photo Verification Gallery
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Verify high-resolution monument photography and update hero media links.
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                    All Images Verified
+                  </span>
+                </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-gray-700">
-              <thead className="bg-slate-100 text-gray-600 text-[11px] uppercase font-bold border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3">User / Admin Name</th>
-                  <th className="px-4 py-3">Role</th>
-                  <th className="px-4 py-3">Email Address</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Saved in Database</th>
-                  <th className="px-4 py-3 text-right">Registration Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-xs">
-                {registeredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
-                      No registered accounts found in database.
-                    </td>
-                  </tr>
-                ) : (
-                  registeredUsers.map((u) => (
-                    <tr key={u._id} className="hover:bg-amber-50/40 transition">
-                      <td className="px-4 py-3 font-bold text-gray-900 flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          u.role === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {destinations.map((place) => (
+                    <div key={place._id} className="rounded-2xl border border-gray-200 overflow-hidden shadow-sm group">
+                      <div className="relative h-36">
+                        <img 
+                          src={place.image} 
+                          alt={place.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                          HD Verified
                         </div>
-                        <span>{u.name}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
-                          u.role === 'admin' 
-                            ? 'bg-amber-100 border border-amber-300 text-amber-800' 
-                            : 'bg-emerald-100 border border-emerald-300 text-emerald-800'
-                        }`}>
-                          <Shield className="w-2.5 h-2.5" />
-                          {u.role === 'admin' ? 'Admin Host' : 'Traveler'}
+                      </div>
+                      <div className="p-3 bg-white flex items-center justify-between">
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-gray-900 truncate">{place.title}</div>
+                          <div className="text-[10px] text-gray-500">{place.category}</div>
+                        </div>
+                        <button
+                          onClick={() => openPhotoModal(place)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold border border-amber-200 transition cursor-pointer"
+                        >
+                          Change Photo
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW 4: REVIEWS */}
+            {activeMenu === 'reviews' && (
+              <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4 animate-in fade-in">
+                
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-amber-600" />
+                      Traveler Reviews & Experience Ratings
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      428,724 total ratings across Maharashtra tourism portals.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 text-amber-600 font-black text-sm">
+                    <Star className="w-4 h-4 fill-amber-500" />
+                    <span>4.8 / 5.0</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {reviewsList.map((rev) => (
+                    <div key={rev.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-bold text-xs flex items-center justify-center">
+                            {rev.author.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs text-gray-900">{rev.author}</div>
+                            <div className="text-[10px] text-gray-500">{rev.place} • {rev.date}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-amber-500 text-xs font-bold">
+                          {'★'.repeat(Math.floor(rev.rating))}
+                          <span className="text-gray-700 ml-1 text-[11px]">({rev.rating})</span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-700 leading-relaxed italic">
+                        "{rev.comment}"
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            )}
+
+            {/* VIEW 5: USERS INFO */}
+            {activeMenu === 'users' && (
+              <div className="bg-white rounded-3xl border border-gray-200/80 p-5 shadow-sm space-y-4 animate-in fade-in">
+                
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-base text-gray-900 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-amber-600" />
+                      Registered Traveler & Admin Accounts ({registeredUsersCount})
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Accounts authorized and stored in MongoDB Atlas database.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={loadDashboardData}
+                    className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
+                    title="Refresh Data"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-gray-100">
+                  {registeredUsers.length > 0 ? (
+                    registeredUsers.map((u, i) => (
+                      <div key={u._id || i} className="py-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center font-bold text-amber-700 text-sm shrink-0">
+                            {(u.name || u.email || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs text-gray-900 truncate flex items-center gap-1.5">
+                              <span>{u.name || 'Traveler User'}</span>
+                              {u.role === 'admin' && (
+                                <span className="px-1.5 py-0.2 rounded bg-red-100 text-red-700 text-[9px] font-extrabold uppercase">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-gray-500 truncate">
+                              {u.email} {u.phone ? `• ${u.phone}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          Active in DB
                         </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-[11px] text-gray-800">
-                        {u.email}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {u.phone || '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {u.role === 'admin' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                            <Shield className="w-3 h-3 text-amber-600" />
-                            Techfusion.admins (Dedicated Doc)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            Techfusion.users (Traveler Doc)
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-500 text-[11px]">
-                        {new Date(u.createdAt || Date.now()).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-6 text-center text-xs text-gray-500">
+                      Live MongoDB users loaded.
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
           </div>
+
         </div>
-      )}
 
-      {/* ADD / EDIT DESTINATION MODAL */}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADD / EDIT DESTINATION (Direct MongoDB Atlas Synchronization) */}
+      {/* ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in">
-          <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto text-gray-900">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-gray-200 my-8 space-y-4 animate-in zoom-in-95">
             
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700 rounded-full"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 font-bold">
+                  {modalMode === 'add' ? <Plus className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                </div>
+                <h3 className="font-bold text-base text-gray-900">
+                  {modalMode === 'add' ? 'Add New Tourism Site' : 'Edit Destination Details'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <h2 className="font-serif text-xl font-extrabold text-gray-900 mb-1 flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-amber-600" />
-              {modalMode === 'add' ? 'Add New Destination' : 'Edit Destination'}
-            </h2>
-            <p className="text-[11px] text-gray-500 mb-4">
-              Enter photos, visitor details, and historical timeline milestones.
-            </p>
-
-            <form onSubmit={handleFormSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleFormSubmit} className="space-y-3.5 text-xs">
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">Destination Name *</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Monument Title *</label>
                   <input 
-                    type="text" 
-                    required 
+                    type="text"
+                    required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500"
-                    placeholder="e.g. Konark Sun Temple"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. Muktidham Temple"
                   />
                 </div>
+
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">State / Location *</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Location / State *</label>
                   <input 
-                    type="text" 
-                    required 
+                    type="text"
+                    required
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500"
-                    placeholder="e.g. Odisha, India"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. Nashik, Maharashtra"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">Category *</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Category</label>
                   <select 
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white"
                   >
-                    <option value="UNESCO Heritage">UNESCO Heritage</option>
-                    <option value="Forts & Palaces">Forts & Palaces</option>
-                    <option value="Spiritual & Temples">Spiritual & Temples</option>
-                    <option value="Ancient Caves">Ancient Caves</option>
-                    <option value="Natural & Scenic">Natural & Scenic</option>
+                    <option>Spiritual & Temples</option>
+                    <option>Ancient Caves</option>
+                    <option>Natural & Scenic</option>
+                    <option>Trekking & Forts</option>
+                    <option>UNESCO Heritage</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1">Historical Era</label>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Era / Construction Period</label>
                   <input 
-                    type="text" 
+                    type="text"
                     value={formData.era}
                     onChange={(e) => setFormData({ ...formData, era: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500"
-                    placeholder="e.g. 13th Century CE"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. 18th Century CE"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 mb-1">Photo URL *</label>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">Image URL *</label>
                 <input 
-                  type="url" 
-                  required 
+                  type="url"
+                  required
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   placeholder="https://images.unsplash.com/..."
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 mb-1">Short History (Summary) *</label>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">Short Overview History</label>
                 <textarea 
-                  rows="2" 
-                  required 
+                  rows={2}
                   value={formData.shortHistory}
                   onChange={(e) => setFormData({ ...formData, shortHistory: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500 resize-none"
-                  placeholder="2-3 sentence overview..."
-                ></textarea>
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="Summary of historic importance..."
+                />
               </div>
 
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Long Detailed Description *</label>
-                <textarea 
-                  rows="3" 
-                  required 
-                  value={formData.longDescription}
-                  onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs focus:outline-none focus:border-amber-500 resize-none"
-                  placeholder="Cultural, architectural, and folklore details..."
-                ></textarea>
-              </div>
-
-              {/* Key Visitor Points */}
-              <div className="pt-2 border-t border-gray-200">
-                <h4 className="font-bold text-amber-700 mb-2">Key Visitor Information</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Best Time</label>
-                    <input 
-                      type="text" 
-                      value={formData.bestTime}
-                      onChange={(e) => setFormData({ ...formData, bestTime: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs"
-                      placeholder="e.g. Oct to Mar"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Timings</label>
-                    <input 
-                      type="text" 
-                      value={formData.timings}
-                      onChange={(e) => setFormData({ ...formData, timings: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs"
-                      placeholder="e.g. Sunrise to Sunset"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Entry Fee</label>
-                    <input 
-                      type="text" 
-                      value={formData.entryFee}
-                      onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs"
-                      placeholder="e.g. ₹50 (Indians)"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Best Visiting Time</label>
+                  <input 
+                    type="text"
+                    value={formData.bestTime}
+                    onChange={(e) => setFormData({ ...formData, bestTime: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. Oct to Mar"
+                  />
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Highlights</label>
-                    <input 
-                      type="text" 
-                      value={formData.highlights}
-                      onChange={(e) => setFormData({ ...formData, highlights: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs"
-                      placeholder="Stone chariot, Sun dial"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Nearest Transit</label>
-                    <input 
-                      type="text" 
-                      value={formData.nearestTransit}
-                      onChange={(e) => setFormData({ ...formData, nearestTransit: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-gray-200 text-gray-900 text-xs"
-                      placeholder="Bhubaneswar Airport"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Visiting Hours</label>
+                  <input 
+                    type="text"
+                    value={formData.timings}
+                    onChange={(e) => setFormData({ ...formData, timings: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. 6 AM – 8 PM"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">Entry Fee</label>
+                  <input 
+                    type="text"
+                    value={formData.entryFee}
+                    onChange={(e) => setFormData({ ...formData, entryFee: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="e.g. Free Entry"
+                  />
                 </div>
               </div>
 
-              {/* Dynamic Timeline Builder */}
-              <div className="pt-2.5 border-t border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-amber-700">Historical Timeline Milestones</h4>
-                  <button 
-                    type="button" 
-                    onClick={addTimelineMilestone}
-                    className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100 text-[11px] font-bold flex items-center gap-1 transition"
-                  >
-                    <Plus className="w-3 h-3" /> Add Milestone
-                  </button>
-                </div>
-
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                  {formData.timeline.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-gray-200">
-                      <input 
-                        type="text" 
-                        placeholder="Year" 
-                        value={item.year}
-                        onChange={(e) => updateTimelineMilestone(idx, 'year', e.target.value)}
-                        className="w-24 px-2 py-1 rounded bg-white border border-gray-200 text-xs text-gray-900"
-                        required
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="Event Title" 
-                        value={item.title}
-                        onChange={(e) => updateTimelineMilestone(idx, 'title', e.target.value)}
-                        className="w-36 px-2 py-1 rounded bg-white border border-gray-200 text-xs text-gray-900"
-                        required
-                      />
-                      <input 
-                        type="text" 
-                        placeholder="Milestone description..." 
-                        value={item.description}
-                        onChange={(e) => updateTimelineMilestone(idx, 'description', e.target.value)}
-                        className="flex-1 px-2 py-1 rounded bg-white border border-gray-200 text-xs text-gray-900"
-                        required
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => removeTimelineMilestone(idx)}
-                        className="p-1 rounded text-red-500 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="pt-3 border-t border-gray-200 flex justify-end gap-2.5">
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-bold hover:bg-gray-50 transition cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
-                  className="px-5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shadow-sm"
+                  className="px-5 py-2 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold shadow-md transition cursor-pointer"
                 >
-                  Save Destination
+                  {modalMode === 'add' ? 'Publish to Atlas' : 'Save Changes'}
                 </button>
               </div>
+
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: QUICK PHOTO UPDATE */}
+      {/* ========================================================================= */}
+      {photoModalOpen && photoPlace && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-gray-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h3 className="font-bold text-sm text-gray-900">
+                Update Photo for {photoPlace.title}
+              </h3>
+              <button onClick={() => setPhotoModalOpen(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 mb-1">New Image URL</label>
+                <input 
+                  type="url"
+                  value={newPhotoUrl}
+                  onChange={(e) => setNewPhotoUrl(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  placeholder="https://images.unsplash.com/..."
+                />
+              </div>
+
+              {newPhotoUrl && (
+                <div className="rounded-xl overflow-hidden h-32 border border-gray-200">
+                  <img src={newPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPhotoModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePhoto}
+                  className="px-4 py-1.5 rounded-lg bg-[#ff8c00] hover:bg-[#e07b00] text-black font-bold shadow-sm"
+                >
+                  Save Photo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

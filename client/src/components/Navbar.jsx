@@ -240,13 +240,49 @@ export default function Navbar({
           {user ? (
             <div className="flex items-center gap-1.5 sm:gap-2">
               {user.role === 'admin' ? (
-                <button
-                  onClick={() => setCurrentView('admin-dashboard')}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-500 text-amber-700 text-[11px] font-bold tracking-wide uppercase transition hover:bg-amber-100 cursor-pointer"
-                >
-                  <Shield className="w-3 h-3" />
-                  <span>Admin Suite</span>
-                </button>
+                <>
+                  {/* View Website Button (matching screenshot) */}
+                  <button
+                    onClick={() => {
+                      setCurrentView('landing');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold tracking-wide uppercase transition cursor-pointer border ${
+                      currentView === 'landing'
+                        ? 'bg-amber-500 text-black border-amber-500 shadow-sm'
+                        : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-amber-300'
+                    }`}
+                    title="View Main Tourism Website"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-amber-700" />
+                    <span>View Website</span>
+                  </button>
+
+                  {/* Traveler Hub Button (matching screenshot) */}
+                  <button
+                    onClick={() => setCurrentView('user-dashboard')}
+                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-bold tracking-wide uppercase transition cursor-pointer border ${
+                      currentView === 'user-dashboard'
+                        ? 'bg-amber-500 text-black border-amber-500 shadow-sm'
+                        : 'bg-white hover:bg-gray-100 text-gray-700 border-gray-200'
+                    }`}
+                    title="Open Traveler Hub"
+                  >
+                    <User className="w-3.5 h-3.5 text-gray-600" />
+                    <span>Traveler Hub</span>
+                  </button>
+
+                  {/* Admin Suite Button (if on other views) */}
+                  {currentView !== 'admin-dashboard' && (
+                    <button
+                      onClick={() => setCurrentView('admin-dashboard')}
+                      className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-500 text-amber-700 text-[11px] font-bold tracking-wide uppercase transition hover:bg-amber-100 cursor-pointer"
+                    >
+                      <Shield className="w-3 h-3 text-amber-600" />
+                      <span>Admin Suite</span>
+                    </button>
+                  )}
+                </>
               ) : (
                 <>
                   {/* Explore Web - Click to show main webpage */}
