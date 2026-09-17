@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Sun, Globe, ChevronDown, LogOut, User, ArrowRight } from 'lucide-react';
+import { Shield, Sun, Globe, ChevronDown, LogOut, User, ArrowRight, Compass } from 'lucide-react';
 
 export default function Navbar({
   currentView,
@@ -76,16 +76,24 @@ export default function Navbar({
             <Sun className="w-3.5 h-3.5" />
           </div>
 
-          {/* Sign Up / Log In Button (replaces Admin Dashboard button) */}
+          {/* Sign Up / Log In Button (or User/Admin dashboard buttons) */}
           {user ? (
             <div className="flex items-center gap-2">
-              {user.role === 'admin' && (
+              {user.role === 'admin' ? (
                 <button
                   onClick={() => setCurrentView('admin-dashboard')}
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-500 text-amber-700 text-[11px] font-bold tracking-wide uppercase transition hover:bg-amber-100"
                 >
                   <Shield className="w-3 h-3" />
-                  <span>Admin</span>
+                  <span>Admin Suite</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setCurrentView('user-dashboard')}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-500 text-amber-700 text-[11px] font-bold tracking-wide uppercase transition hover:bg-amber-100"
+                >
+                  <Compass className="w-3 h-3 text-amber-600" />
+                  <span>Explorer Suite</span>
                 </button>
               )}
               <button
