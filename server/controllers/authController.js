@@ -12,10 +12,17 @@ const generateToken = (user) => {
   );
 };
 
+// Exactly 2 authorized admin emails allowed on the platform
+const AUTHORIZED_ADMIN_EMAILS = [
+  'bhavinshinde8@gmail.com',
+  'admin@techfusion.com'
+];
+
 // In-memory fallback users
 let memoryUsers = [
-  { _id: 'usr-1', name: 'Pooja Sharma', email: 'traveler@phoenix.in', password: 'password123', role: 'user', favorites: [] },
-  { _id: 'adm-1', name: 'Aditya Rajput', email: 'admin@phoenix-tourism.in', password: 'password123', role: 'admin', favorites: [] }
+  { _id: 'usr-1', name: 'Pooja Sharma', email: 'traveler@example.com', password: 'password123', role: 'user', favorites: [] },
+  { _id: 'adm-1', name: 'Bhavin Shinde (SuperAdmin)', email: 'bhavinshinde8@gmail.com', password: 'Tech@2026', role: 'admin', favorites: [] },
+  { _id: 'adm-2', name: 'Techfusion Admin Lead', email: 'admin@techfusion.com', password: 'Tech@2026', role: 'admin', favorites: [] }
 ];
 
 // @desc    Register user or admin (Admins saved to dedicated 'admins' collection, Users to 'users')
@@ -33,6 +40,13 @@ exports.register = async (req, res) => {
     const assignedRole = role === 'admin' ? 'admin' : 'user';
     const cleanName = (name && name.trim()) ? name.trim() : (assignedRole === 'admin' ? 'Admin Portal Host' : 'Traveler Explorer');
     const cleanPassword = password && password.length >= 6 ? password : (password || 'password123');
+
+    if (assignedRole === 'admin' && !AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+      return res.status(403).json({
+        success: false,
+        message: `Access Denied: Admin privileges are strictly restricted to authorized emails (${AUTHORIZED_ADMIN_EMAILS.join(', ')}). Other emails cannot register as Admin.`
+      });
+    }
 
     if (getIsConnected()) {
       if (assignedRole === 'admin') {
@@ -161,12 +175,18 @@ exports.login = async (req, res) => {
       let isAdminAccount = false;
 
       if (role === 'admin') {
+        if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+          return res.status(403).json({
+            success: false,
+            message: `Access Denied: "${cleanEmail}" does not have Admin access. Admin access is strictly restricted to authorized emails (${AUTHORIZED_ADMIN_EMAILS.join(', ')}).`
+          });
+        }
+
         // Look up in dedicated Admin collection
         account = await Admin.findOne({ email: cleanEmail }).select('+password');
         if (account) {
           isAdminAccount = true;
         } else {
-          // Fallback to User collection if admin was saved there previously
           account = await User.findOne({ email: cleanEmail, role: 'admin' }).select('+password');
           if (account) isAdminAccount = true;
         }
@@ -174,7 +194,7 @@ exports.login = async (req, res) => {
         if (!account) {
           return res.status(401).json({ 
             success: false, 
-            message: `Access Denied: No Admin account found for "${cleanEmail}" in the database. Only registered administrators can log in to the Admin Portal.` 
+            message: `Access Denied: Admin account for "${cleanEmail}" was not found in the database.` 
           });
         }
       } else {

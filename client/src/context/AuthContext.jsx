@@ -44,8 +44,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const quickDemoLogin = async (role = 'user') => {
-    const email = role === 'admin' ? 'admin@phoenix-tourism.in' : 'traveler@example.com';
-    const pass = 'password123';
+    const email = role === 'admin' ? 'bhavinshinde8@gmail.com' : 'traveler@example.com';
+    const pass = role === 'admin' ? 'Tech@2026' : 'password123';
     return await login(email, pass, role);
   };
 

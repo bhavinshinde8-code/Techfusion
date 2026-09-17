@@ -29,24 +29,25 @@ const autoSeedDatabase = async () => {
     if (adminCount === 0) {
       await Admin.create([
         { 
-          name: 'Bhavin Admin (Host)', 
-          email: 'bhavin.admin@techfusion.com', 
-          phone: '+91 9876543211',
-          password: 'adminpassword123', 
+          name: 'Bhavin Shinde (SuperAdmin)', 
+          email: 'bhavinshinde8@gmail.com', 
+          phone: '+91 8999515737',
+          password: 'Tech@2026', 
           role: 'admin',
           adminLevel: 'SuperAdmin',
-          department: 'Heritage Operations'
+          department: 'Executive Governance & Operations'
         },
         { 
-          name: 'Aditya Rajput (Admin)', 
-          email: 'admin@phoenix-tourism.in', 
-          password: 'password123', 
+          name: 'Techfusion Admin Lead', 
+          email: 'admin@techfusion.com', 
+          phone: '+91 8999515737',
+          password: 'Tech@2026', 
           role: 'admin',
-          adminLevel: 'DestinationManager',
-          department: 'Tourism Management'
+          adminLevel: 'SuperAdmin',
+          department: 'Tourism Platform Administration'
         }
       ]);
-      console.log(`🌱 [DB Seed] Created dedicated Admin documents in MongoDB admins collection`);
+      console.log(`🌱 [DB Seed] Created 2 authorized Admin documents in MongoDB admins collection`);
     }
   } catch (seedErr) {
     console.warn(`⚠️ [DB Seed Notice] ${seedErr.message}`);

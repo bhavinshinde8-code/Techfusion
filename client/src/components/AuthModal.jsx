@@ -191,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
               <input
                 type="text"
                 required
-                placeholder={portal === 'admin' ? "admin@phoenix-tourism.in or admin email" : "traveler@example.com or phone"}
+                placeholder={portal === 'admin' ? "bhavinshinde8@gmail.com or admin@techfusion.com" : "traveler@example.com or phone"}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-xs placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:bg-white transition"
