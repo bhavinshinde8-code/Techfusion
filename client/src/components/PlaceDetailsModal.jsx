@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { 
   X, MapPin, Heart, Calendar, Clock, Star, Volume2, 
   VolumeX, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
@@ -9,6 +10,10 @@ import {
 
 export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onAddSite }) {
   const { favorites = [], toggleFavorite, user } = useAuth();
+  const { t, language, translateDestination } = useLanguage();
+  
+  // Localized destination details
+  const locPlace = translateDestination(place) || place;
   
   // Audio Guide state
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -52,43 +57,43 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
   // Contextual Timeline Data
   const defaultTimeline = [
     {
-      year: place.era || '966 CE',
+      year: locPlace.era || '966 CE',
       title: 'Foundational Royal Endowment',
-      description: `Historic patrons commission sacred stone edifices, instituting daily rituals and lasting cultural prominence for ${place.title}.`,
-      image: place.image
+      description: `Historic patrons commission sacred stone edifices, instituting daily rituals and lasting cultural prominence for ${locPlace.title}.`,
+      image: locPlace.image
     },
     {
       year: '1517 CE',
       title: 'Imperial Patronage & Expansion',
       description: `Rulers endow golden kalashas, mandapas, and vast revenue grants, elevating the monument to national heritage prominence.`,
-      image: place.image
+      image: locPlace.image
     },
     {
       year: '1933 CE',
       title: 'Modern Preservation & Pilgrimage Circuit',
       description: `Recognized and protected under state cultural heritage trusts with millions of international travelers visiting annually.`,
-      image: place.image
+      image: locPlace.image
     }
   ];
 
-  const timelineList = place.timeline && place.timeline.length > 0 ? place.timeline : defaultTimeline;
+  const timelineList = locPlace.timeline && locPlace.timeline.length > 0 ? locPlace.timeline : defaultTimeline;
   const currentTimeline = timelineList[Math.min(timelineIndex, timelineList.length - 1)] || timelineList[0];
 
   // Highlights
   const defaultHighlights = [
-    `Architectural Sanctum of ${place.title}`,
+    `Architectural Sanctum of ${locPlace.title}`,
     'Historic Basalt Stone Carvings & Heritage Sculptures',
     'Sacred Water Kund & Scenic Natural Viewpoints',
     'Recognized Monument of Cultural & Spiritual Eminence'
   ];
-  const highlights = (place.keyPoints?.highlights && place.keyPoints.highlights.length > 0) 
-    ? place.keyPoints.highlights 
+  const highlights = (locPlace.keyPoints?.highlights && locPlace.keyPoints.highlights.length > 0) 
+    ? locPlace.keyPoints.highlights 
     : defaultHighlights;
 
   // Contextual Nearby Places based on destination
   const getNearbyPlaces = () => {
-    const t = (place.title || '').toLowerCase();
-    if (t.includes('trimbak')) {
+    const titleLower = (place.title || '').toLowerCase();
+    if (titleLower.includes('trimbak')) {
       return [
         { name: 'Brahmagiri Mountain Trek', dist: '1.2 km', tag: 'Scenic Viewpoint / Nature', image: '/places/anjaneri.jpg' },
         { name: 'Kushavarta Sacred Kund', dist: '0.5 km', tag: 'Sacred Shrine', image: '/places/ramkund.jpg' },
@@ -96,7 +101,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
         { name: 'Gorakhnath Gufa', dist: '3.5 km', tag: 'Ancient Hermitage Cave', image: '/places/pandavleni.jpg' }
       ];
     }
-    if (t.includes('sula')) {
+    if (titleLower.includes('sula')) {
       return [
         { name: 'York Winery & Tasting Room', dist: '1.8 km', tag: 'Artisan Wine Estate', image: '/places/sula-vineyards.jpg' },
         { name: 'Gangapur Dam & Boat Club', dist: '2.5 km', tag: 'Scenic Watersports', image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' },
@@ -104,7 +109,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
         { name: 'Chambhar Leni Caves', dist: '9.0 km', tag: 'Jain Heritage Caves', image: '/places/pandavleni.jpg' }
       ];
     }
-    if (t.includes('pandavleni')) {
+    if (titleLower.includes('pandavleni')) {
       return [
         { name: 'Dadasaheb Phalke Smarak', dist: '0.8 km', tag: 'Cultural Memorial', image: '/places/ramkund.jpg' },
         { name: 'Buddha Vihar Meditation Hall', dist: '1.2 km', tag: 'Spiritual Center', image: '/places/pandavleni.jpg' },
@@ -112,7 +117,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
         { name: 'Trimbak Heritage Circuit', dist: '22 km', tag: 'Pilgrimage Corridor', image: '/places/trimbakeshwar.jpg' }
       ];
     }
-    if (t.includes('anjaneri')) {
+    if (titleLower.includes('anjaneri')) {
       return [
         { name: 'Anjaneri Temple & Peak', dist: '1.5 km', tag: 'Mythological Birthplace', image: '/places/anjaneri.jpg' },
         { name: 'Coin Museum Anjaneri', dist: '3.2 km', tag: 'Numismatic Heritage', image: '/places/ramkund.jpg' },
@@ -131,8 +136,8 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
 
   // Contextual Historical Circuits
   const getHistoricalCircuits = () => {
-    const t = (place.title || '').toLowerCase();
-    if (t.includes('trimbak') || t.includes('ramkund')) {
+    const titleLower = (place.title || '').toLowerCase();
+    if (titleLower.includes('trimbak') || titleLower.includes('ramkund')) {
       return [
         {
           title: 'All-India 12 Jyotirlinga Circuit',
@@ -146,7 +151,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
         }
       ];
     }
-    if (t.includes('sula')) {
+    if (titleLower.includes('sula')) {
       return [
         {
           title: 'Nashik Valley Agro-Viticulture Circuit',
@@ -178,7 +183,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
   const nearbyPlaces = getNearbyPlaces();
   const historicalCircuits = getHistoricalCircuits();
 
-  // Audio Guide Narration Handler
+  // Audio Guide Narration Handler with native SpeechSynthesis support
   const toggleAudioGuide = () => {
     if (!window.speechSynthesis) {
       alert('Speech synthesis is not supported on this browser.');
@@ -190,8 +195,9 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
       setIsPlayingAudio(false);
     } else {
       window.speechSynthesis.cancel();
-      const textToRead = `${place.title}. Located in ${place.state}. ${place.shortHistory || ''} ${place.longDescription || ''}`;
+      const textToRead = `${locPlace.title}. ${locPlace.shortHistory || ''} ${locPlace.longDescription || ''}`;
       const utterance = new SpeechSynthesisUtterance(textToRead);
+      utterance.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : 'en-IN';
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
       utterance.onend = () => setIsPlayingAudio(false);
@@ -230,8 +236,8 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
         {/* ========================================================================= */}
         <div className="relative h-64 sm:h-72 md:h-80 w-full overflow-hidden shrink-0 select-none">
           <img 
-            src={place.image} 
-            alt={place.title}
+            src={locPlace.image} 
+            alt={locPlace.title}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1322] via-black/40 to-black/20" />
@@ -239,7 +245,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
           {/* Top Left Rating Badge (Matching screenshot) */}
           <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff8c00] text-black font-black text-xs shadow-lg uppercase tracking-wide">
             <Star className="w-3.5 h-3.5 fill-black stroke-black" />
-            <span>4.9 (15420+ REVIEWS)</span>
+            <span>{t('reviewsBadge', '★ 4.9 (15,420+ REVIEWS)')}</span>
           </div>
 
           {/* Top Right Close Button (Matching screenshot) */}
@@ -255,16 +261,16 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
           {/* Bottom Left Title, Tag, and Location */}
           <div className="absolute bottom-5 left-5 right-5 z-10 text-white space-y-1">
             <div className="text-[11px] font-extrabold uppercase tracking-widest text-[#ffaa33] drop-shadow-sm">
-              {place.category ? place.category.toUpperCase() : 'ANCIENT VAISHNAVITE SHRINE'}
+              {locPlace.category ? locPlace.category.toUpperCase() : 'ANCIENT VAISHNAVITE SHRINE'}
             </div>
 
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-md">
-              {place.title}
+              {locPlace.title}
             </h1>
 
             <div className="flex items-center gap-1.5 text-xs text-slate-200 font-semibold pt-0.5">
               <MapPin className="w-3.5 h-3.5 text-amber-400" />
-              <span>{place.state}</span>
+              <span>{locPlace.state}</span>
             </div>
           </div>
         </div>
@@ -279,7 +285,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
           {/* --------------------------------------------------------------------- */}
           <div className="space-y-2">
             <div className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
-              KEY FEATURES & HIGHLIGHTS
+              {t('keyFeaturesTitle', 'KEY FEATURES & HIGHLIGHTS')}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -307,10 +313,10 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                 </div>
                 <div>
                   <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">
-                    Detailed Description (In-Depth Heritage & Tourist Guide)
+                    {t('detailedDescTitle', 'Detailed Description (In-Depth Heritage & Tourist Guide)')}
                   </h3>
                   <p className="text-[11px] text-gray-500">
-                    Click to expand text / listen to audio guide in your selected language
+                    {t('detailedDescSubtitle', 'Click to expand text / listen to audio guide in your selected language')}
                   </p>
                 </div>
               </div>
@@ -327,7 +333,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                   title="Listen to narrated audio guide"
                 >
                   {isPlayingAudio ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{isPlayingAudio ? 'Stop Audio' : 'Play Audio'}</span>
+                  <span className="hidden sm:inline">{isPlayingAudio ? t('stopAudio', 'Stop Audio') : t('playAudio', 'Play Audio')}</span>
                 </button>
 
                 <button
@@ -335,7 +341,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                   onClick={() => setIsDescExpanded(!isDescExpanded)}
                   className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-bold flex items-center gap-1 transition cursor-pointer"
                 >
-                  <span>{isDescExpanded ? 'Read Less' : 'Read More'}</span>
+                  <span>{isDescExpanded ? t('readLess', 'Read Less') : t('readMore', 'Read More')}</span>
                   {isDescExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </button>
               </div>
@@ -345,11 +351,11 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
             {isDescExpanded && (
               <div className="pt-2 border-t border-gray-100 space-y-3 animate-in fade-in text-xs sm:text-[13px] text-gray-700 leading-relaxed">
                 <p>
-                  {place.longDescription || place.shortHistory || 'Comprehensive historical archive detailing patronage, Vedic origins, and architectural evolution.'}
+                  {locPlace.longDescription || locPlace.shortHistory || 'Comprehensive historical archive detailing patronage, Vedic origins, and architectural evolution.'}
                 </p>
-                {place.shortHistory && place.longDescription && (
+                {locPlace.shortHistory && locPlace.longDescription && (
                   <p className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-gray-600 italic">
-                    "{place.shortHistory}"
+                    "{locPlace.shortHistory}"
                   </p>
                 )}
               </div>
@@ -370,10 +376,10 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                 </div>
                 <div>
                   <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">
-                    VISUAL TIMELINE (YEAR-BY-YEAR ERA SLIDER)
+                    {t('visualTimelineTitle', 'VISUAL TIMELINE (YEAR-BY-YEAR ERA SLIDER)')}
                   </h3>
                   <p className="text-[10px] text-gray-500">
-                    Slide to travel through historical eras of {place.title}
+                    {t('visualTimelineSubtitle', 'Slide to travel through historical eras')} - {locPlace.title}
                   </p>
                 </div>
               </div>
@@ -441,7 +447,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                 }`}
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Previous Era</span>
+                <span>{t('previousEra', 'Previous Era')}</span>
               </button>
 
               <button
@@ -454,7 +460,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                     : 'border-amber-400 text-amber-900 hover:bg-amber-100 bg-amber-50 shadow-xs'
                 }`}
               >
-                <span>Next Era</span>
+                <span>{t('nextEra', 'Next Era')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -470,10 +476,10 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
               <div className="flex items-center gap-2">
                 <Compass className="w-4 h-4 text-amber-600" />
                 <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 uppercase tracking-wide">
-                  NEARBY PLACES TO VISIT (WITHIN 15KM)
+                  {t('nearbyPlacesTitle', 'NEARBY PLACES TO VISIT (WITHIN 15KM)')}
                 </h3>
               </div>
-              <span className="text-[10px] text-gray-400 font-medium">Click to navigate</span>
+              <span className="text-[10px] text-gray-400 font-medium">{t('clickToNavigate', 'Click to navigate')}</span>
             </div>
 
             {/* 2x2 Grid of Nearby Places */}
@@ -482,7 +488,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                 <div
                   key={idx}
                   onClick={() => {
-                    const query = encodeURIComponent(`${near.name}, ${place.state}`);
+                    const query = encodeURIComponent(`${near.name}, ${locPlace.state}`);
                     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
                   }}
                   className="flex items-center justify-between p-2.5 rounded-2xl border border-gray-200/90 hover:border-amber-400 hover:bg-amber-50/40 transition cursor-pointer group shadow-xs"
@@ -520,7 +526,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
             <div className="flex items-center gap-2">
               <Link2 className="w-4 h-4 text-amber-600" />
               <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 uppercase tracking-wide">
-                CO-RELATED HISTORICAL CIRCUITS & HERITAGE LINKS
+                {t('circuitsTitle', 'CO-RELATED HISTORICAL CIRCUITS & HERITAGE LINKS')}
               </h3>
             </div>
 
@@ -555,10 +561,10 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
               </div>
               <div>
                 <h4 className="font-bold text-xs text-gray-900">
-                  Live Destination Web Resource
+                  {t('liveWebResourceTitle', 'Live Destination Web Resource')}
                 </h4>
                 <p className="text-[11px] text-gray-500">
-                  Explore real-time encyclopedia articles, historical archives, and guide pages on the web.
+                  {t('liveWebResourceSubtitle', 'Explore real-time encyclopedia articles, historical archives, and guide pages on the web.')}
                 </p>
               </div>
             </div>
@@ -570,12 +576,12 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
                 rel="noreferrer"
                 className="px-3.5 py-1.5 rounded-xl bg-[#ff8c00] hover:bg-[#e07b00] text-black font-extrabold text-xs flex items-center gap-1 shadow-sm transition"
               >
-                <span>READ WEB GUIDE</span>
+                <span>{t('readWebGuide', 'READ WEB GUIDE')}</span>
                 <ExternalLink className="w-3 h-3 stroke-[2.5]" />
               </a>
 
               <a
-                href={`https://www.google.com/search?q=${encodeURIComponent(place.title + ' ' + place.state)}`}
+                href={`https://www.google.com/search?q=${encodeURIComponent(place.title + ' ' + (place.state || ''))}`}
                 target="_blank"
                 rel="noreferrer"
                 className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs border border-gray-300 flex items-center gap-1 shadow-xs transition"
@@ -601,7 +607,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
               onChange={handleTogglePublishInternal}
               className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer accent-[#ff8c00]"
             />
-            <span>Publish <span className="hidden sm:inline font-normal text-slate-400">(Accessible to Users on Website)</span></span>
+            <span>{t('publishAccessible', 'Publish (Accessible to Users on Website)')}</span>
           </label>
 
           {/* Right Action Buttons: Add to Sites + Close */}
@@ -614,12 +620,12 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
               {isAddedToSites ? (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>SAVED TO SITES!</span>
+                  <span>{t('savedToSites', 'SAVED TO SITES!')}</span>
                 </>
               ) : (
                 <>
                   <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>ADD TO SITES</span>
+                  <span>{t('addToSites', 'ADD TO SITES')}</span>
                 </>
               )}
             </button>
@@ -629,7 +635,7 @@ export default function PlaceDetailsModal({ place, onClose, onTogglePublish, onA
               onClick={onClose}
               className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-gray-900 font-bold text-xs transition border border-slate-200 shadow-sm cursor-pointer"
             >
-              Close
+              {t('closeModal', 'Close')}
             </button>
           </div>
 

@@ -1,22 +1,25 @@
 import React from 'react';
 import { ShieldCheck, Compass, Map } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PlatformFeatures() {
+  const { t } = useLanguage();
+
   const features = [
     {
       icon: ShieldCheck,
-      title: "Data From Resprctive Munclple Office",
-      description: "Get authentic local insights, hidden gems, and tailored historical narratives directly from registered hosts."
+      title: t('feat1Title', 'Data From Resprctive Munclple Office'),
+      description: t('feat1Desc', 'Get authentic local insights, hidden gems, and tailored historical narratives directly from registered hosts.')
     },
     {
       icon: Compass,
-      title: "Smart Destination Search",
-      description: "Search ancient temples, thrilling treks, heritage caves, and wildlife spots with filters and real-time timings."
+      title: t('feat2Title', 'Smart Destination Search'),
+      description: t('feat2Desc', 'Search ancient temples, thrilling treks, heritage caves, and wildlife spots with filters and real-time timings.')
     },
     {
       icon: Map,
-      title: "Seamless Travel Planning",
-      description: "Explore entry fees, best seasons, parking info, and guide contact details in one unified portal."
+      title: t('feat3Title', 'Seamless Travel Planning'),
+      description: t('feat3Desc', 'Explore entry fees, best seasons, parking info, and guide contact details in one unified portal.')
     }
   ];
 
@@ -27,10 +30,10 @@ export default function PlatformFeatures() {
         {/* Section Header */}
         <div className="text-center mb-7 sm:mb-8">
           <div className="text-amber-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5">
-            PLATFORM FEATURES
+            {t('featuresBadge', 'PLATFORM FEATURES')}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-950">
-            Empowering Travelers & Local Hosts
+            {t('featuresTitle', 'Empowering Travelers & Local Hosts')}
           </h2>
         </div>
 

@@ -1,27 +1,30 @@
 import React from 'react';
 import { Info, AlertTriangle, ShieldCheck, Compass } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PlatformDisclaimers() {
+  const { t } = useLanguage();
+
   const disclaimers = [
     {
       icon: AlertTriangle,
-      title: "Team Pheonix Ai & Information Disclaimer",
-      description: "AI generated images are prone to errors in images. It is a purely technical glitch and not intented to harm the sentiments of any indivisual or community."
+      title: t('disc1Title', 'Team Pheonix Ai & Information Disclaimer'),
+      description: t('disc1Desc', 'AI generated images are prone to errors in images. It is a purely technical glitch and not intented to harm the sentiments of any indivisual or community.')
     },
     {
       icon: AlertTriangle,
-      title: "General Travel & Information Disclaimer",
-      description: "All destination information, visiting timings, entry fees, and route suggestions provided on this portal are taken from google .Visitors are advised to cross-verify local opening hours and on-ground guidelines prior to traveling."
+      title: t('disc2Title', 'General Travel & Information Disclaimer'),
+      description: t('disc2Desc', 'All destination information, visiting timings, entry fees, and route suggestions provided on this portal are taken from google .Visitors are advised to cross-verify local opening hours and on-ground guidelines prior to traveling.')
     },
     {
       icon: ShieldCheck,
-      title: "Local Regulations & Safety Advice",
-      description: "Travelers are strictly requested to respect monument guidelines, heritage preservation rules, wildlife reserve norms, and local customs. The platform is not liable for itinerary disruptions, weather advisories, or restricted entries."
+      title: t('disc3Title', 'Local Regulations & Safety Advice'),
+      description: t('disc3Desc', 'Travelers are strictly requested to respect monument guidelines, heritage preservation rules, wildlife reserve norms, and local customs. The platform is not liable for itinerary disruptions, weather advisories, or restricted entries.')
     },
     {
       icon: Compass,
-      title: "Third-Party & Navigation Services",
-      description: "External links, map directions, transport details, and accommodation references are provided for convenience. Team Phoenix does not endorse or control third-party service providers."
+      title: t('disc4Title', 'Third-Party & Navigation Services'),
+      description: t('disc4Desc', 'External links, map directions, transport details, and accommodation references are provided for convenience. Team Phoenix does not endorse or control third-party service providers.')
     }
   ];
 
@@ -39,10 +42,10 @@ export default function PlatformDisclaimers() {
             </div>
             <div>
               <div className="text-amber-600 text-[10px] font-bold uppercase tracking-wider mb-0.5">
-                IMPORTANT NOTICE
+                {t('disclaimersBadge', 'IMPORTANT NOTICE')}
               </div>
               <h3 className="text-xl font-bold text-gray-900">
-                Platform & Travel Disclaimers
+                {t('disclaimersTitle', 'Platform & Travel Disclaimers')}
               </h3>
             </div>
           </div>
@@ -75,10 +78,10 @@ export default function PlatformDisclaimers() {
           {/* Bottom Bar inside Disclaimer */}
           <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 gap-1.5">
             <span>
-              By utilizing this portal, you acknowledge and agree to adhere to standard safety and tourism regulations.
+              {t('discFooter', 'By utilizing this portal, you acknowledge and agree to adhere to standard safety and tourism regulations.')}
             </span>
             <span className="text-amber-600 font-bold shrink-0 text-[11px]">
-              SIH Tourism Safety Initiative
+              {t('sihInitiative', 'SIH Tourism Safety Initiative')}
             </span>
           </div>
 

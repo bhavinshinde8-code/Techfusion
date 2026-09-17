@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { 
   Shield, Sun, Globe, ChevronDown, LogOut, User, 
   ArrowRight, Compass, Search, Heart, MapPin, X 
@@ -14,8 +15,8 @@ export default function Navbar({
   onSelectPlace
 }) {
   const { user, logout, favorites = [] } = useAuth();
+  const { language, setLanguage, t, languages, translateDestination } = useLanguage();
   const [langDropdown, setLangDropdown] = useState(false);
-  const [currentLang, setCurrentLang] = useState('English');
   const [navSearch, setNavSearch] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -58,7 +59,7 @@ export default function Navbar({
               Team <span className="text-amber-600 font-extrabold">Pheonix</span>
             </div>
             <div className="text-[7px] sm:text-[8px] tracking-[0.2em] text-gray-500 font-semibold uppercase -mt-0.5">
-              Discover Nashik
+              {t('brandTagline')}
             </div>
           </div>
         </div>
@@ -69,7 +70,7 @@ export default function Navbar({
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 pointer-events-none" />
             <input 
               type="text"
-              placeholder="Search saved locations..."
+              placeholder={t('searchPlaceholder')}
               value={navSearch}
               onFocus={() => setIsSearchOpen(true)}
               onChange={(e) => { setNavSearch(e.target.value); setIsSearchOpen(true); }}
@@ -112,14 +113,14 @@ export default function Navbar({
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900">
                     <Heart className="w-3.5 h-3.5 text-red-500 fill-current" />
-                    <span>Saved Locations ({savedLocations.length})</span>
+                    <span>{t('searchSavedHeading')} ({savedLocations.length})</span>
                   </div>
                   {openWishlistModal && (
                     <button
                       onClick={() => { setIsSearchOpen(false); openWishlistModal(); }}
                       className="text-[10px] font-bold text-amber-600 hover:underline cursor-pointer"
                     >
-                      View Wishlist →
+                      {t('viewWishlist')} →
                     </button>
                   )}
                 </div>
@@ -162,7 +163,7 @@ export default function Navbar({
                 ) : (
                   <div className="p-3 text-center rounded-xl bg-slate-50 border border-slate-100 text-gray-500 text-[11px] mb-2">
                     {savedLocations.length === 0 
-                      ? "No locations saved yet. Click the ❤️ on any place to save it here!" 
+                      ? t('noSavedLocations')
                       : "No saved locations match your search query."}
                   </div>
                 )}
@@ -171,7 +172,7 @@ export default function Navbar({
                 {otherMatches.length > 0 && (
                   <div className="pt-2 border-t border-gray-100">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
-                      Other Destinations ({otherMatches.length})
+                      {t('otherDestinations')} ({otherMatches.length})
                     </div>
                     <div className="space-y-1">
                       {otherMatches.slice(0, 3).map((place) => (
@@ -206,22 +207,27 @@ export default function Navbar({
           <div className="relative">
             <button
               onClick={() => setLangDropdown(!langDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 hover:bg-gray-200 text-xs text-gray-700 font-medium transition"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 border border-gray-200 hover:bg-gray-200 text-xs text-gray-700 font-medium transition cursor-pointer"
             >
               <Globe className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-[11px]">{currentLang}</span>
+              <span className="text-[11px] font-bold">
+                {languages.find(l => l.code === language)?.nativeName || 'English'}
+              </span>
               <ChevronDown className="w-3 h-3 text-gray-500" />
             </button>
 
             {langDropdown && (
-              <div className="absolute right-0 mt-1.5 w-32 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50 text-xs">
-                {['English', 'हिन्दी (Hindi)', 'मराठी (Marathi)'].map((l) => (
+              <div className="absolute right-0 mt-1.5 w-36 bg-white border border-gray-200 rounded-2xl shadow-xl py-1.5 z-50 text-xs animate-in fade-in">
+                {languages.map((l) => (
                   <button
-                    key={l}
-                    onClick={() => { setCurrentLang(l); setLangDropdown(false); }}
-                    className="w-full text-left px-3 py-1.5 text-gray-700 hover:bg-amber-50 hover:text-amber-700 text-xs transition"
+                    key={l.code}
+                    onClick={() => { setLanguage(l.code); setLangDropdown(false); }}
+                    className={`w-full text-left px-3.5 py-2 hover:bg-amber-50 hover:text-amber-800 text-xs transition flex items-center justify-between cursor-pointer ${
+                      language === l.code ? 'bg-amber-50 font-bold text-amber-700' : 'text-gray-700'
+                    }`}
                   >
-                    {l}
+                    <span>{l.label}</span>
+                    {language === l.code && <span className="text-amber-600 font-black">✔</span>}
                   </button>
                 ))}
               </div>
@@ -255,7 +261,7 @@ export default function Navbar({
                     title="View Main Tourism Website"
                   >
                     <Globe className="w-3.5 h-3.5 text-amber-700" />
-                    <span>View Website</span>
+                    <span>{t('viewWebsite')}</span>
                   </button>
 
                   {/* Admin Suite Button (if on other views) */}
@@ -265,7 +271,7 @@ export default function Navbar({
                       className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-500 text-amber-700 text-[11px] font-bold tracking-wide uppercase transition hover:bg-amber-100 cursor-pointer"
                     >
                       <Shield className="w-3 h-3 text-amber-600" />
-                      <span>Admin Suite</span>
+                      <span>{t('adminSuite')}</span>
                     </button>
                   )}
                 </>
@@ -285,7 +291,7 @@ export default function Navbar({
                     title="Explore Main Webpage"
                   >
                     <Globe className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Explore Web</span>
+                    <span>{t('exploreWeb')}</span>
                   </button>
 
                   {/* Dashboard link to return to user dashboard */}
@@ -296,7 +302,7 @@ export default function Navbar({
                       title="Return to User Dashboard"
                     >
                       <User className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Dashboard</span>
+                      <span>{t('userDashboard')}</span>
                     </button>
                   )}
                 </>
@@ -306,7 +312,7 @@ export default function Navbar({
                 className="px-2.5 sm:px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 text-xs text-gray-700 font-medium transition flex items-center gap-1 shadow-sm cursor-pointer"
               >
                 <LogOut className="w-3 h-3 text-red-500" />
-                <span className="text-[10px] sm:text-[11px]">Log Out</span>
+                <span className="text-[10px] sm:text-[11px]">{t('logOut')}</span>
               </button>
             </div>
           ) : (
@@ -314,7 +320,7 @@ export default function Navbar({
               onClick={() => openAuthModal('login')}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#ff8c00] hover:bg-[#e07b00] text-black text-[11px] sm:text-xs font-black tracking-wide uppercase transition-all duration-200 shadow-[0_4px_14px_rgba(255,140,0,0.35)] hover:shadow-[0_6px_18px_rgba(255,140,0,0.45)] hover:scale-105 cursor-pointer"
             >
-              <span>LOG IN</span>
+              <span>{t('logIn')}</span>
               <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           )}

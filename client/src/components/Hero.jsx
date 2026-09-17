@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Star } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 // Iconic Nashik tourist spots for sliding background
 const NASHIK_PLACES = [
@@ -41,6 +42,7 @@ const NASHIK_PLACES = [
 ];
 
 export default function Hero({ onSelectPlaceById }) {
+  const { t, language } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Preload all background images so crossfade transitions are instant and butter smooth
@@ -99,18 +101,18 @@ export default function Hero({ onSelectPlaceById }) {
         >
           <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 fill-amber-500/20 shrink-0" />
           <span className="truncate">
-            CURRENTLY VIEWING: <span className="text-gray-950 font-extrabold">{currentSpot.title}</span> ({currentSpot.location})
+            {t('currentlyViewing', 'CURRENTLY VIEWING')}: <span className="text-gray-950 font-extrabold">{currentSpot.title}</span> ({currentSpot.location})
           </span>
         </div>
 
         {/* Main Title: Aligned dead center */}
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] font-black tracking-tight text-white mb-2 sm:mb-2.5 drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)] leading-tight">
-          Let's Know <span className="text-amber-400 drop-shadow-[0_0_26px_rgba(245,158,11,0.85)]">Our Nashik</span>
+          {t('heroMainTitle1', "Let's Know")} <span className="text-amber-400 drop-shadow-[0_0_26px_rgba(245,158,11,0.85)]">{t('heroMainTitle2', 'Our Nashik')}</span>
         </h1>
 
         {/* Subtitle: Centered under title */}
         <p className="text-white text-xs sm:text-sm md:text-base max-w-lg sm:max-w-xl md:max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] px-2 mb-2.5 sm:mb-3 text-slate-100">
-          Explore timeless temples, Buddhist caves, sacred river ghats, and majestic Sahyadri mountain forts through local registered tourism hosts.
+          {t('heroDescription', 'Explore timeless temples, Buddhist caves, sacred river ghats, and majestic Sahyadri mountain forts through local registered tourism hosts.')}
         </p>
 
         {/* Subtle Slide Indicators */}
@@ -138,7 +140,7 @@ export default function Hero({ onSelectPlaceById }) {
               12+
             </div>
             <div className="text-[8px] sm:text-[9px] font-bold tracking-wider text-gray-600 uppercase">
-              HISTORICAL SITES
+              {t('historicalSitesStat', 'HISTORICAL SITES')}
             </div>
           </div>
 
@@ -148,7 +150,7 @@ export default function Hero({ onSelectPlaceById }) {
               2000+
             </div>
             <div className="text-[8px] sm:text-[9px] font-bold tracking-wider text-gray-600 uppercase">
-              YEARS HERITAGE
+              {t('yearsHeritageStat', 'YEARS HERITAGE')}
             </div>
           </div>
 
@@ -158,7 +160,7 @@ export default function Hero({ onSelectPlaceById }) {
               50+
             </div>
             <div className="text-[8px] sm:text-[9px] font-bold tracking-wider text-gray-600 uppercase">
-              VERIFIED HOSTS
+              {t('verifiedHostsStat', 'VERIFIED HOSTS')}
             </div>
           </div>
 
@@ -168,7 +170,7 @@ export default function Hero({ onSelectPlaceById }) {
               4.9 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline -mt-0.5" />
             </div>
             <div className="text-[8px] sm:text-[9px] font-bold tracking-wider text-gray-600 uppercase">
-              TRAVELER RATING
+              {t('travelerRatingStat', 'TRAVELER RATING')}
             </div>
           </div>
 
