@@ -6,6 +6,7 @@ const autoSeedDatabase = async () => {
   try {
     const Destination = require('../models/Destination');
     const User = require('../models/User');
+    const Admin = require('../models/Admin');
     const { SEED_DESTINATIONS } = require('../seed/seedData');
 
     const destCount = await Destination.countDocuments();
@@ -19,10 +20,33 @@ const autoSeedDatabase = async () => {
     const userCount = await User.countDocuments();
     if (userCount === 0) {
       await User.create([
-        { name: 'Pooja Sharma', email: 'traveler@example.com', password: 'password123', role: 'user' },
-        { name: 'Aditya Rajput (Admin)', email: 'admin@phoenix-tourism.in', password: 'password123', role: 'admin' }
+        { name: 'Pooja Sharma', email: 'traveler@example.com', password: 'password123', role: 'user' }
       ]);
-      console.log(`🌱 [DB Seed] Created default Traveler & Admin accounts in MongoDB`);
+      console.log(`🌱 [DB Seed] Created default Traveler account in MongoDB users collection`);
+    }
+
+    const adminCount = await Admin.countDocuments();
+    if (adminCount === 0) {
+      await Admin.create([
+        { 
+          name: 'Bhavin Admin (Host)', 
+          email: 'bhavin.admin@techfusion.com', 
+          phone: '+91 9876543211',
+          password: 'adminpassword123', 
+          role: 'admin',
+          adminLevel: 'SuperAdmin',
+          department: 'Heritage Operations'
+        },
+        { 
+          name: 'Aditya Rajput (Admin)', 
+          email: 'admin@phoenix-tourism.in', 
+          password: 'password123', 
+          role: 'admin',
+          adminLevel: 'DestinationManager',
+          department: 'Tourism Management'
+        }
+      ]);
+      console.log(`🌱 [DB Seed] Created dedicated Admin documents in MongoDB admins collection`);
     }
   } catch (seedErr) {
     console.warn(`⚠️ [DB Seed Notice] ${seedErr.message}`);

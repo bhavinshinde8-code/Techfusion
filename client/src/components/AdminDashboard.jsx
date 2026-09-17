@@ -374,10 +374,10 @@ export default function AdminDashboard({ destinations, onDestinationsChange, set
             <div>
               <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
                 <Users className="w-4 h-4 text-amber-600" />
-                MongoDB Atlas: Registered Accounts in Techfusion Database
+                MongoDB Atlas: Multi-Collection Account Directory (Techfusion DB)
               </h3>
               <p className="text-[11px] text-gray-500">
-                All signup information for users and admins is encrypted and saved directly to the <span className="font-semibold text-emerald-700 font-mono">Techfusion.users</span> collection.
+                Admin information is stored in a dedicated document collection (<span className="font-bold text-amber-700 font-mono">Techfusion.admins</span>), while traveler accounts are stored in (<span className="font-bold text-emerald-700 font-mono">Techfusion.users</span>).
               </p>
             </div>
             <button 
@@ -435,10 +435,17 @@ export default function AdminDashboard({ destinations, onDestinationsChange, set
                         {u.phone || '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          Atlas: Techfusion
-                        </span>
+                        {u.role === 'admin' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            <Shield className="w-3 h-3 text-amber-600" />
+                            Techfusion.admins (Dedicated Doc)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Techfusion.users (Traveler Doc)
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-500 text-[11px]">
                         {new Date(u.createdAt || Date.now()).toLocaleDateString('en-IN', {
